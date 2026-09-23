@@ -1,0 +1,11 @@
+node_modules
+dist
+out
+thumbnail
+.DS_Store
+*.log*
+
+# lock文件
+yarn.lock
+package-lock.json
+pnpm-lock.yaml

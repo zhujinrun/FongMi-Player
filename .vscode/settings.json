@@ -1,0 +1,18 @@
+{
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "html.customData": [
+    "./node_modules/@electron-uikit/titlebar/custom-elements.json"
+  ],
+  "i18n-ally.localesPaths": [
+    "src/renderer/src/locales",
+    "src/renderer/src/locales/lang"
+  ]
+}
