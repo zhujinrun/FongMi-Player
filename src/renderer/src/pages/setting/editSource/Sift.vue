@@ -54,7 +54,7 @@
                   </div>
                   <div class="dialog-item">
                     <p>{{ $t('pages.setting.editSource.sift.dialog.request.reqHeader') }}</p>
-                    <t-textarea v-model="form.req.header" placeholder='{ "User-Agent": "Mozilla/5.0 zyplayer" }' />
+                    <t-textarea v-model="form.req.header" placeholder='{ "User-Agent": "Mozilla/5.0 fmplayer" }' />
                   </div>
                   <div v-if="form.req.method !== 'GET'" class="dialog-item">
                     <p>{{ $t('pages.setting.editSource.sift.dialog.request.reqBody') }}</p>

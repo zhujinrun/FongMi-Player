@@ -7,7 +7,7 @@ import { resolve, join } from 'path';
 import logger from './logger';
 import { getWin } from './winManger';
 
-const updaterCacheDirName = 'zyplayer-updater';
+const updaterCacheDirName = 'fmplayer-updater';
 const updatePath = join(app.getAppPath(), updaterCacheDirName, 'pending');
 logger.info(`[update] update module initialized; path: ${updatePath}`);
 

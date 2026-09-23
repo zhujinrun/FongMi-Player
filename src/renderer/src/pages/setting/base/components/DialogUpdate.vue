@@ -13,7 +13,7 @@
               {{ $t('pages.setting.update.systemTip') }}
               <br />
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ $t('pages.setting.update.macAndLinuxTip') }}
-              <t-link theme="primary" href="https://github.com/Hiram-Wong/ZyPlayer/releases/" target="_blank">
+              <t-link theme="primary" href="https://github.com/zhujinrun/FongMi-Player/releases/" target="_blank">
                 github
               </t-link>
               {{ $t('pages.setting.update.download') }}

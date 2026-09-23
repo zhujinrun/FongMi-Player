@@ -5,12 +5,12 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>zyplayer</title>
+  <title>fmplayer</title>
   <style>
     :root {
       background: #F7F7F7;
     }
-    
+
     .loading-position {
       position: fixed;
       top: 50%;
@@ -42,6 +42,7 @@
       :root {
         background-color: #111113;
       }
+
       .loading {
         border: 6px solid #F7F7F7;
       }
@@ -64,8 +65,10 @@
 </head>
 
 <body>
-  <button id="a11y-open-btn" tabindex="1" style="position: fixed; z-index: -1; left: 0px; top: 0px; width: 0px; height: 0px; opacity: 0;">开启读屏标签</button>
-  <div id="a11y-live-assertive" aria-live="assertive" style="position: fixed; z-index: -1; left: 0px; top: 0px; width: 0px; height: 0px; opacity: 0;">读屏标签已关闭</div>
+  <button id="a11y-open-btn" tabindex="1"
+    style="position: fixed; z-index: -1; left: 0px; top: 0px; width: 0px; height: 0px; opacity: 0;">开启读屏标签</button>
+  <div id="a11y-live-assertive" aria-live="assertive"
+    style="position: fixed; z-index: -1; left: 0px; top: 0px; width: 0px; height: 0px; opacity: 0;">读屏标签已关闭</div>
   <div class="loading-position loading">
     <div class="green-box"></div>
   </div>

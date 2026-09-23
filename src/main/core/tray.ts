@@ -64,7 +64,7 @@ const createSystemTray = () => {
 
   // Set application menu
   Menu.setApplicationMenu(createTrayMenu());
-  mainTray.setToolTip('zyplayer');
+  mainTray.setToolTip('fmplayer');
 
   // Left-click event
   mainTray.on('click', () => {

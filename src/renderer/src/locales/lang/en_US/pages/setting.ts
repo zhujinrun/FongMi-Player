@@ -346,7 +346,7 @@ export default {
       sift: 'Sift',
       editSource: 'Edit',
       placeholder: {
-        reqHeader: '{ "User-Agent": "Mozilla/5.0 zyplayer" }',
+        reqHeader: '{ "User-Agent": "Mozilla/5.0 fmplayer" }',
         reqBody: '{ "key": "01b9b7" }',
       },
       rule: {

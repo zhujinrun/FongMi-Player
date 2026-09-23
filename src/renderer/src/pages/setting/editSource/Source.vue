@@ -88,7 +88,7 @@
                   </div>
                   <div class="dialog-item">
                     <p>{{ $t('pages.setting.editSource.source.dialog.request.reqHeader') }}</p>
-                    <t-textarea v-model="form.req.header" placeholder='{ "User-Agent": "Mozilla/5.0 zyplayer" }' />
+                    <t-textarea v-model="form.req.header" placeholder='{ "User-Agent": "Mozilla/5.0 fmplayer" }' />
                   </div>
                   <div v-if="form.req.method !== 'GET'" class="dialog-item">
                     <p>{{ $t('pages.setting.editSource.source.dialog.request.reqBody') }}</p>
@@ -272,7 +272,7 @@
               <t-radio-group variant="default-filled" size="small" v-model="form.nav" @change="changeNav()">
                 <t-radio-button value="debug">{{ $t('pages.setting.editSource.source.select.debug') }}</t-radio-button>
                 <t-radio-button value="source">{{ $t('pages.setting.editSource.source.select.source')
-                  }}</t-radio-button>
+                }}</t-radio-button>
                 <t-radio-button value="rule">{{ $t('pages.setting.editSource.source.select.rule') }}</t-radio-button>
                 <t-radio-button value="log">{{ $t('pages.setting.editSource.source.select.log') }}</t-radio-button>
               </t-radio-group>
@@ -286,14 +286,14 @@
               <t-radio-group variant="default-filled" size="small" v-model="form.clickType.proxy" @change="proxyEvent()"
                 v-if='form.nav === "debug" && form.action === "proxy"'>
                 <t-radio-button value="upload">{{ $t('pages.setting.editSource.source.select.upload')
-                  }}</t-radio-button>
+                }}</t-radio-button>
                 <t-radio-button value="play">{{ $t('pages.setting.editSource.source.select.play') }}</t-radio-button>
                 <t-radio-button value="copy">{{ $t('pages.setting.editSource.source.select.copy') }}</t-radio-button>
               </t-radio-group>
               <t-radio-group variant="default-filled" size="small" v-model="form.clickType.source"
                 @change="sourceEvent()" v-if="form.nav === 'source'">
                 <t-radio-button value="format">{{ $t('pages.setting.editSource.source.select.format')
-                  }}</t-radio-button>
+                }}</t-radio-button>
                 <t-radio-button value="reset">{{ $t('pages.setting.editSource.source.select.reset') }}</t-radio-button>
               </t-radio-group>
             </div>
@@ -887,7 +887,7 @@ const toolEvent = async () => {
 };
 
 const helpEvent = () => {
-  window.electron.ipcRenderer.send('open-url', 'https://github.com/Hiram-Wong/ZyPlayer/wiki/%E5%86%99%E6%BA%90%E5%B7%A5%E5%85%B7');
+  window.electron.ipcRenderer.send('open-url', 'https://github.com/zhujinrun/FongMi-Player/wiki/%E5%86%99%E6%BA%90%E5%B7%A5%E5%85%B7');
 };
 
 const changeNav = async (nav = '', action = '') => {

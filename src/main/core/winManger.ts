@@ -75,7 +75,7 @@ const createMain = () => {
     show: false,
     frame: false,
     autoHideMenuBar: true,
-    title: 'zyplayer',
+    title: 'fmplayer',
     trafficLightPosition: { x: 12, y: 20 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

@@ -3,7 +3,7 @@ name: Build/release
 on:
   push:
     branches:
-      - main
+      - fongmi
 
 jobs:
   release:
@@ -31,7 +31,7 @@ jobs:
         with:
           # GitHub token, automatically provided to the action
           # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.access_token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           # build_script_name: 'electron:prebuild'
           # If the commit is tagged with a version (e.g. "v1.0.0"),
           # release the app after building
@@ -40,34 +40,34 @@ jobs:
       - name: Upload Artifact (macOS)
         uses: actions/upload-artifact@v4
         with:
-          name: zyplayer-mac
+          name: fmplayer-mac
           path: ./dist/*-mac-*.dmg
           if-no-files-found: ignore
 
       - name: Upload Artifact (Windows)
         uses: actions/upload-artifact@v4
         with:
-          name: zyplayer-win
+          name: fmplayer-win
           path: ./dist/*-win-*.exe
           if-no-files-found: ignore
 
       - name: Upload Artifact (Linux AppImage)
         uses: actions/upload-artifact@v4
         with:
-          name: zyplayer-linux-appimage
+          name: fmplayer-linux-appimage
           path: ./dist/*.AppImage
           if-no-files-found: ignore
 
       - name: Upload Artifact (Linux deb)
         uses: actions/upload-artifact@v4
         with:
-          name: zyplayer-linux-deb
+          name: fmplayer-linux-deb
           path: ./dist/*.deb
           if-no-files-found: ignore
 
       - name: Upload Artifact (Linux rpm)
         uses: actions/upload-artifact@v4
         with:
-          name: zyplayer-linux-rpm
+          name: fmplayer-linux-rpm
           path: ./dist/*.rpm
           if-no-files-found: ignore

@@ -1,10 +1,10 @@
 # see config at https://www.electron.build/configuration/configuration
 
 # 应用程序的唯一标识符
-appId: com.hiram.zyplayer
+appId: com.john.fmplayer
 # 应用程序的产品名称
-productName: zyplayer
-copyright: Copyright © 2023 zyplayer Team Inc.
+productName: fmplayer
+copyright: Copyright © 2026 fmplayer Team Inc.
 # 构建资源所在的目录
 directories:
   buildResources: build
@@ -22,7 +22,7 @@ asarUnpack:
 # Windows 平台配置
 win:
   # 可执行文件名
-  executableName: zyplayer
+  executableName: fmplayer
   # 应用程序的图标文件路径
   icon: build/icons/logo.ico
   # 构建类型
@@ -55,7 +55,7 @@ nsis:
 # macOS 平台配置
 mac:
   # 可执行文件名
-  executableName: zyplayer
+  executableName: fmplayer
   # 应用程序的图标文件路径
   icon: build/icons/logo.icns
   # 权限继承的文件路径
@@ -84,7 +84,7 @@ dmg:
 # Linux 平台配置
 linux:
   # 可执行文件名
-  executableName: zyplayer
+  executableName: fmplayer
   # 应用程序的图标文件路径
   icon: build/icons/logo.icns
   # 构建类型
@@ -102,7 +102,7 @@ linux:
         - x64
         - arm64
   # 维护者信息
-  maintainer: hiram.top
+  maintainer: john.top
   # 应用程序类别
   category: Audio;Video
 # AppImage 配置
@@ -123,7 +123,7 @@ npmRebuild: false
 publish:
   # 更新提供商
   provider: github
-  owner: "Hiram-Wong"
-  repo: "ZyPlayer"
+  owner: "zhujinrun"
+  repo: "FongMi-Player"
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/

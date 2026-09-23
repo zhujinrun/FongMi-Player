@@ -9,13 +9,13 @@ body:
         Issue 列表接受 bug 报告或是新功能请求。
 
         在发布一个 Issue 前，请确保：
-        - 在 [旧Issue列表](https://github.com/Hiram-Wong/ZyPlayer/issues?q=is%3Aissue) 中搜索过你的问题。（你的问题可能已有人提出，也可能已在最新版本中被修正）
+        - 在 [旧Issue列表](https://github.com/zhujinrun/FongMi-Player/issues?q=is%3Aissue) 中搜索过你的问题。（你的问题可能已有人提出，也可能已在最新版本中被修正）
         - 如果你发现一个已经关闭的旧 Issue 在最新版本中仍然存在，不要在旧 Issue 下面留言，请建一个新的 issue。
 
   - type: input
     id: version
     attributes:
-      label: zyplayer 版本
+      label: fmplayer 版本
       description: 请检查在最新项目版本中能否重现此 issue。
       placeholder: 请填写
     validations:

@@ -10,7 +10,7 @@ const createMenu = () => {
   }
   const menuBar: Array<MenuItemConstructorOptions | MenuItem> = [
     {
-      label: 'zyplayer',
+      label: 'fmplayer',
       submenu: [
         {
           label: '关于',
@@ -107,8 +107,8 @@ const createMenu = () => {
         {
           label: '访问Github',
           click() {
-            logger.info('[menu] visit official github, url is https://github.com/Hiram-Wong/ZyPlayer');
-            const url = 'https://github.com/Hiram-Wong/ZyPlayer';
+            logger.info('[menu] visit official github, url is https://github.com/zhujinrun/FongMi-Player');
+            const url = 'https://github.com/zhujinrun/FongMi-Player';
             shell.openExternal(url);
           },
         },

@@ -6,7 +6,7 @@
  * @original-author hjdhnx
  * @original-source {@link https://github.com/hjdhnx/hipy-server/blob/master/app/t4/files/drpy3_libs/drpy3.js | Source on GitHub}
  *
- * @modified-by HiramWong <admin@catni.cn>
+ * @modified-by JohnZhu <john.zhujr@gmail.com>
  * @modification-date 2024-07-04T21:11:19+08:00
  * @modification-description 使用TypeScript适配, 替换eval函数防止报错, 增加日志读取, 自定义请求头用于前端被自动丢失\底层拦截, 并采取措施防止 Tree-Shaking 删除关键代码
  *

@@ -167,7 +167,7 @@ app.whenReady().then(async () => {
   });
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.zyplayer');
+  electronApp.setAppUserModelId('com.fmplayer');
 
   // The frameless window ipc allow the renderer process to control the browser window
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils

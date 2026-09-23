@@ -86,9 +86,9 @@ const initConfig = async () => {
       window.$pageSpy = new PageSpy({
         api: 'test.jikejishu.com',
         clientOrigin: 'https://test.jikejishu.com',
-        project: 'zyplayer',
+        project: 'fmplayer',
         autoRender: true,
-        title: 'zyplayer for debug',
+        title: 'fmplayer for debug',
       });
     }
   }

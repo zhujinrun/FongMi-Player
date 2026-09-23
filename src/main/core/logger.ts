@@ -1,7 +1,7 @@
 /**  By default, it writes logs to the following locations:
- * on Linux: ~/.config/{app name}/logs/main.log                        ~/.config/zyplayer/logs/main.log
- * on macOS: ~/Library/Logs/{app name}/main.log                        ~/Library/Logs/zyplayer/main.log
- * on Windows: %USERPROFILE%\AppData\Roaming\{app name}\logs\main.log  %USERPROFILE%\AppData\Roaming\zyplayer\logs\main.log
+ * on Linux: ~/.config/{app name}/logs/main.log                        ~/.config/fmplayer/logs/main.log
+ * on macOS: ~/Library/Logs/{app name}/main.log                        ~/Library/Logs/fmplayer/main.log
+ * on Windows: %USERPROFILE%\AppData\Roaming\{app name}\logs\main.log  %USERPROFILE%\AppData\Roaming\fmplayer\logs\main.log
  * @see https://www.npmjs.com/package/electron-log
  */
 import { ipcMain, app } from 'electron';

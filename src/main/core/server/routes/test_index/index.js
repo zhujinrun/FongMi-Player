@@ -60,7 +60,7 @@ async function main() {
   let channels = [];
   live_files.forEach((it) => {
     let absp = pathLib.join(path_dir, `${live_path}/${it}`).replace(/\\/g, '/');
-    absp = 'http://127.0.0.1:9978/api/v1/file/' + absp.split('/zyplayer/file/')[1];
+    absp = 'http://127.0.0.1:9978/api/v1/file/' + absp.split('/fmplayer/file/')[1];
     let aname = it.split('.')[0];
     channels.push({
       name: aname,

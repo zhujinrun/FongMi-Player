@@ -2,7 +2,7 @@
  * @module worker
  * @brief web-worker 专属线程处理
  * @version  0.0.1
- * @author HiramWong <admin@catni.cn>
+ * @author JohnZhu <john.zhujr@gmail.com>
  * @date 2023-03-24T18:21:29+08:00
  */
 

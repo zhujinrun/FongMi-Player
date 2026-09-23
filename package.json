@@ -1,16 +1,16 @@
 {
-  "name": "zyplayer",
+  "name": "fmplayer",
   "version": "3.3.7",
   "description": "simple and lightweight video client",
   "main": "./out/main/index.js",
   "author": {
-    "name": "Hiram-Wong",
-    "email": "admin@catni.cn"
+    "name": "zhujinrun",
+    "email": "john.zhujr@gmail.com"
   },
   "license": "MIT",
   "license-file": "LICENSE",
-  "repository": "github:Hiram-Wong/ZyPlayer",
-  "homepage": "https://github.com/Hiram-Wong/ZyPlayer",
+  "repository": "github:zhujinrun/FongMi-Player",
+  "homepage": "https://github.com/zhujinrun/FongMi-Player",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --ext .vue,.js,.jsx,.ts,.tsx ./ --max-warnings 0",

@@ -56,7 +56,7 @@ const options = {
     id: '', //必填，视频id, 用于下面api请求时使用
     api: 'http://127.0.0.1:9978/api/v1/barrge/', //必填,后台提供
     addition: [], //可选，额外的弹幕
-    user: 'ZyPlayer', //弹幕作者
+    user: 'FmPlayer', //弹幕作者
     bottom: '15%',
     unlimited: false,
   },

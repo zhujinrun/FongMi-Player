@@ -347,7 +347,7 @@ export default {
       sift: '筛选',
       editSource: '写源',
       placeholder: {
-        reqHeader: '{ "User-Agent": "Mozilla/5.0 zyplayer" }',
+        reqHeader: '{ "User-Agent": "Mozilla/5.0 fmplayer" }',
         reqBody: '{ "key": "01b9b7" }',
       },
       rule: {

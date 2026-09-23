@@ -6,7 +6,7 @@
  * @original-author jade
  * @original-source {@link https://github.com/jadehh/TVSpider/blob/main/lib/cloud.js | Source on GitHub}
  *
- * @modified-by HiramWong <admin@catni.cn>
+ * @modified-by JohnZhu <john.zhujr@gmail.com>
  * @modification-date 2023-06-02T20:43:25+08:00
  * @modification-description 使用TypeScript适配, 替换eval函数防止报错, 增加日志读取, 自定义请求头用于前端被自动丢失\底层拦截, 并采取措施防止 Tree-Shaking 删除关键代码
  *

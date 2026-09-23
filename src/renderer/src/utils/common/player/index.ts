@@ -1,7 +1,7 @@
 /*!
  * @module multi-player
  * @brief 多播放器集成方案
- * @author HiramWong <admin@catni.cn>
+ * @author JohnZhu <john.zhujr@gmail.com>
  * @update 2024-07-01
  * @version 0.1.3
  *

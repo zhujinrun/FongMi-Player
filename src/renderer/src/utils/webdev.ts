@@ -17,9 +17,9 @@ const initializeWebdavClient = async (url: string, username: string, password: s
 
     clientWebdev = await createClient(url, { username, password });
 
-    const remoteDirectoryExists = await clientWebdev.exists('/zyplayer');
+    const remoteDirectoryExists = await clientWebdev.exists('/fmplayer');
     if (!remoteDirectoryExists) {
-      await clientWebdev.createDirectory('/zyplayer');
+      await clientWebdev.createDirectory('/fmplayer');
     }
     return true;
   } catch (err) {
@@ -37,7 +37,7 @@ const rsyncRemote = async (url: string, username: string, password: string): Pro
     }
     const dbExportResult = await exportDb(['all']);
     const formattedJson = JSON.stringify(dbExportResult);
-    await clientWebdev!.putFileContents('/zyplayer/config.json', formattedJson, { overwrite: false });
+    await clientWebdev!.putFileContents('/fmplayer/config.json', formattedJson, { overwrite: false });
     console.info(`[webdev][sync][success]`);
     return true;
   } catch (err) {
@@ -52,7 +52,7 @@ const rsyncLocal = async (url: string, username: string, password: string): Prom
       const status = await initializeWebdavClient(url, username, password);
       if (!status) return false;
     }
-    const str = (await clientWebdev!.getFileContents('/zyplayer/config.json', { format: 'text' })) as unknown as string;
+    const str = (await clientWebdev!.getFileContents('/fmplayer/config.json', { format: 'text' })) as unknown as string;
     const formattedJson = JSON.parse(str);
     await initDb(formattedJson);
     console.info(`[webdev][sync][success]`);
@@ -71,7 +71,7 @@ const autoSync = async (url: string, username: string, password: string): void =
     }
     const dbExportResult = await exportDb(['all']);
     const formattedJson = JSON.stringify(dbExportResult);
-    await clientWebdev!.putFileContents('/zyplayer/config.json', formattedJson, { overwrite: false });
+    await clientWebdev!.putFileContents('/fmplayer/config.json', formattedJson, { overwrite: false });
     console.info(`[webdev][sync][success]`);
   } catch (err) {
     console.error(`[webdev][sync][error]${err}`);

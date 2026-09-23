@@ -2,14 +2,14 @@
   <img width="128" src="https://s2.loli.net/2024/02/29/7Q1nVbhkHdSmo5D.png" >
 </p>
 <p align="center">
-  <a href="https://github.com/Hiram-Wong/ZyPlayer/wiki" target="_blank">文档</a>
-  <a href="https://github.com/Hiram-Wong/ZyPlayer/issues" target="_blank">反馈</a>
-  <a href="https://github.com/Hiram-Wong/ZyPlayer/releases" target="_blank">下载</a>
+  <a href="https://github.com/zhujinrun/FongMi-Player/wiki" target="_blank">文档</a>
+  <a href="https://github.com/zhujinrun/FongMi-Player/issues" target="_blank">反馈</a>
+  <a href="https://github.com/zhujinrun/FongMi-Player/releases" target="_blank">下载</a>
 </p>
 
 # 软件介绍
 
-ZyPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它基于 `electron-vite` 框架，集成了 `TDesign` UI 组件库与 `Vue3` 全家桶，以清新的薄荷绿为主题，旨在为用户提供流畅的跨平台娱乐体验。
+FmPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它基于 `electron-vite` 框架，集成了 `TDesign` UI 组件库与 `Vue3` 全家桶，以清新的薄荷绿为主题，旨在为用户提供流畅的跨平台娱乐体验。
 
 **重要提醒**: 仅此Github发布，请勿上当受骗；请各位公众号、QQ群、博客的管理者不要费力宣传及引流本软件!
 
@@ -19,7 +19,7 @@ ZyPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它
 
 <details>
 <summary>展开查看用户协议及免责申明</summary>
-感谢您选择使用zyplayer(以下简称本软件)，在使用产品和服务之前，请您仔细阅读和理解以下声明:
+感谢您选择使用fmplayer(以下简称本软件)，在使用产品和服务之前，请您仔细阅读和理解以下声明:
 
 1. 若您不同意本声明的任何内容，请您立即停止使用本软件。一旦您开始使用本软件产品和服务，则表示您已同意本声明的所有内容。
 2. 本软件仅供个人学习、研究和技术交流使用，仅提供展示功能，所有数据资源均由用户自身制作提供，包括但不限于视频网站、媒体分享站点等。本软件无法控制这些资源的合法性、准确性、完整性或可用性，因此不对资源内容的真实性、合法性或适用性负责。
@@ -39,7 +39,7 @@ ZyPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它
 
 </details>
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Hiram-Wong/ZyPlayer&type=Date)](https://star-history.com/#Hiram-Wong/ZyPlayer&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=zhujinrun/FongMi-Player&type=Date)](https://star-history.com/#zhujinrun/FongMi-Player&Date)
 
 ## 🎉 功能亮点
 
@@ -91,39 +91,39 @@ ZyPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它
 
 ## 🛠️ 下载与安装
 
-> **最新发布版下载**: 访问 [GitHub Releases页面](https://github.com/Hiram-Wong/ZyPlayer/releases) 获取。
+> **最新发布版下载**: 访问 [GitHub Releases页面](https://github.com/zhujinrun/FongMi-Player/releases) 获取。
 
-> **最新开发版下载**: 访问 [GitHub Actions页面](https://github.com/Hiram-Wong/ZyPlayer/actions) 获取。
+> **最新开发版下载**: 访问 [GitHub Actions页面](https://github.com/zhujinrun/FongMi-Player/actions) 获取。
 
 ### macOS 安装问题解决方案
 
 若遇到“已损坏”提示，执行以下命令修复权限
 
 ```bash
-sudo xattr -cr /Applications/zyplayer.app
+sudo xattr -cr /Applications/fmplayer.app
 ```
 
 ### Linux Appimage桌面快捷方式设置
 
 ```bash
 [1] 选择一张icon图标下载
-[2] 在任意位置新建一个名为zyplayer.desktop的文件，并写入如下内容
+[2] 在任意位置新建一个名为fmplayer.desktop的文件，并写入如下内容
     [Desktop Entry]
-    Name=zyplayer
-    Exec=/home/xxx/Downloads/zyplayer-3.3.5.AppImage  # AppImage程序路径
-    Icon=/home/xxx/Downloads/zyplayer.png  # 图标路径
+    Name=fmplayer
+    Exec=/home/xxx/Downloads/fmplayer-3.3.5.AppImage  # AppImage程序路径
+    Icon=/home/xxx/Downloads/fmplayer.png  # 图标路径
     Type=Application
     StartupNotify=true
-[3] 保存zyplayer.desktop后右键属性,在权限目录下允许作为程序执行文件上打钩
-[4] 讲zyplayer.desktop文件复制到/usr/share/applications路径下
+[3] 保存fmplayer.desktop后右键属性,在权限目录下允许作为程序执行文件上打钩
+[4] 讲fmplayer.desktop文件复制到/usr/share/applications路径下
 ```
 
 ## 🚗 二次开发
 
 ```
 [1]安装 node.js version18 以上
-[2]克隆项目  git clone https://github.com/Hiram-Wong/ZyPlayer.git
-[3]进入项目  cd ZyPlayer/
+[2]克隆项目  git clone https://github.com/zhujinrun/FongMi-Player.git
+[3]进入项目  cd FongMi-Player/
 [4]打开vscode  code .
 [5]修改代码
 [6]修改packgae.json[仅win8.1、7] "electron": "^19.1.9",

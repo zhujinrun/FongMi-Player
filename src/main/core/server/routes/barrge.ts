@@ -13,7 +13,7 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
     async (req: FastifyRequest<{ Querystring: { [key: string]: string } }>, reply: FastifyReply) => {
       try {
         const barrage = await setting.find({ key: 'barrage' }).value;
-        // { "id": "http://www.iqiyi.com/v_14za0ot37y8.html", "author": "ZyPlayer", "time": 46.032141, "text": "111", "type": 0 }
+        // { "id": "http://www.iqiyi.com/v_14za0ot37y8.html", "author": "FmPlayer", "time": 46.032141, "text": "111", "type": 0 }
         const { id, author, time, text, color, type } = req.body as any;
         const doc = {
           player: id,

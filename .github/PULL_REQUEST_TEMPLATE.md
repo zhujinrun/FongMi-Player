@@ -1,6 +1,6 @@
 <!--
 首先，感谢你的贡献！😄
-请阅读并遵循 [zyplayer 贡献指南]，填写以下 pull request 的信息。
+请阅读并遵循 [fmplayer 贡献指南]，填写以下 pull request 的信息。
 PR 在维护者审核通过后会合并，谢谢！
 -->
 

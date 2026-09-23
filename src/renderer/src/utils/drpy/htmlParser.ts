@@ -6,7 +6,7 @@
  * @original-author hjdhnx
  * @original-source {@link https://github.com/hjdhnx/hipy-server/blob/master/app/t4/base/htmlParser.py | Source on GitHub}
  *
- * @modified-by HiramWong <admin@catni.cn>
+ * @modified-by JohnZhu <john.zhujr@gmail.com>
  * @modification-date 2023-04-09T18:31:59+08:00
  * @modification-description Python转TypeScript, 适用于JavaScript项目
  */

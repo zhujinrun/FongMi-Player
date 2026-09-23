@@ -5,7 +5,6 @@ thumbnail
 .DS_Store
 *.log*
 
-# lock文件
-yarn.lock
+# lock文件（yarn.lock 需提交给 Actions cache）
 package-lock.json
 pnpm-lock.yaml

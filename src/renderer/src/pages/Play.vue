@@ -496,7 +496,7 @@ const pagination = ref({
 const shareData = ref({
   name: '',
   url: '',
-  provider: 'zyplayer',
+  provider: 'fmplayer',
 });
 
 const VIDEO_PROCESS_DOC = reactive({
@@ -1041,7 +1041,7 @@ const skipTimeInEndChange = () => {
 
 // 分享
 const shareEvent = () => {
-  const sourceUrl = 'https://web.zyplayer.fun/?url=';
+  const sourceUrl = 'https://web.fmplayer.fun/?url=';
   let name;
 
   if (type.value === 'film') name = `${info.value["vod_name"]} ${formatIndex(active.filmIndex).index}`;
