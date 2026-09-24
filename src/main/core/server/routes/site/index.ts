@@ -38,9 +38,27 @@ async function syncFromGateway(configUrl: string, gatewayBase: string) {
   const base = (gatewayBase || GATEWAY_DEFAULT).replace(/\/$/, '');
   if (configUrl) {
     await gatewayJson(`${base}/config?url=${encodeURIComponent(configUrl)}`, { method: 'POST', body: '{}' });
+  } else {
+    // no configUrl: gateway must already have sites loaded
+    try {
+      const health = await gatewayJson(`${base}/health`);
+      const loaded = health?.loaded ?? health?.data?.loaded;
+      const siteCount = health?.['config.siteCount'] ?? health?.data?.['config.siteCount'];
+      if (loaded === false || (typeof siteCount === 'number' && siteCount <= 0)) {
+        throw new Error('网关尚未加载配置，请填写配置地址，或先启动网关并加载源');
+      }
+    } catch (e: any) {
+      if (e?.message && !String(e.message).includes('网关')) {
+        throw new Error(`无法连接网关 ${base}：${e.message}`);
+      }
+      throw e;
+    }
   }
   const sitesRes = await gatewayJson(`${base}/sites`);
   const list: any[] = Array.isArray(sitesRes?.data) ? sitesRes.data : [];
+  if (!list.length) {
+    throw new Error(configUrl ? '网关配置里没有可用站点' : '网关当前没有已加载的源');
+  }
   const existing = site.all() || [];
   const byApi = new Map<string, any>();
   for (const row of existing) {
@@ -78,6 +96,9 @@ async function syncFromGateway(configUrl: string, gatewayBase: string) {
       await site.add(doc);
       created += 1;
     }
+  }
+  if (created + updated === 0) {
+    throw new Error('同步未写入任何源（可能全部被跳过）');
   }
   return { gateway: base, total: list.length, created, updated, skipped };
 }

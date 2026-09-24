@@ -150,20 +150,32 @@ const gatewayForm = reactive({
 });
 
 const onSyncGateway = async () => {
+  const base = gatewayForm.gatewayBase?.trim() || 'http://127.0.0.1:9979';
+  const configUrl = gatewayForm.configUrl?.trim() || '';
+  // 网关地址必填；配置地址可空（同步网关已加载源）
+  if (!base) {
+    MessagePlugin.warning(t('pages.setting.gateway.gatewayBaseTip'));
+    return;
+  }
   gatewayForm.loading = true;
   try {
-    const res: any = await syncGatewaySites({
-      configUrl: gatewayForm.configUrl?.trim() || '',
-      gatewayBase: gatewayForm.gatewayBase?.trim() || 'http://127.0.0.1:9979',
-    });
-    MessagePlugin.success(
-      `${t('pages.setting.gateway.success')}: +${res?.created ?? 0} ~${res?.updated ?? 0}`,
-    );
+    const res: any = await syncGatewaySites({ configUrl, gatewayBase: base });
+    const created = res?.created ?? 0;
+    const updated = res?.updated ?? 0;
+    const total = res?.total ?? 0;
+    if (!total && !created && !updated) {
+      MessagePlugin.warning(t('pages.setting.gateway.empty'));
+    } else {
+      MessagePlugin.success(
+        `${t('pages.setting.gateway.success')}: 网关${total} · +${created} ~${updated}`,
+      );
+    }
     isVisible.dialogGateway = false;
     refreshEvent(false);
   } catch (err: any) {
     console.error('[site][syncGateway]', err);
-    MessagePlugin.error(`${t('pages.setting.gateway.fail')}: ${err?.message || err}`);
+    const msg = err?.response?.data?.message || err?.message || String(err);
+    MessagePlugin.error(`${t('pages.setting.gateway.fail')}: ${msg}`);
   } finally {
     gatewayForm.loading = false;
   }

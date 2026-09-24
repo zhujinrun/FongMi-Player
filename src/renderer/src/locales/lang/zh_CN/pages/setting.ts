@@ -91,13 +91,14 @@ export default {
   },
   gateway: {
     title: '从网关同步源',
-    tip: '可选填 TVBox 配置地址让网关重新加载；留空则仅同步网关当前已加载的源',
+    tip: '配置地址可选：填写则让网关重新加载；留空则同步网关当前已加载的源（需网关已启动且有配置）',
     configUrl: '配置地址',
     gatewayBase: '网关地址',
     gatewayBaseTip: '默认 http://127.0.0.1:9979',
     confirm: '开始同步',
     success: '同步完成',
     fail: '同步失败',
+    empty: '没有可同步的数据',
   },
   site: {
     name: '名称',

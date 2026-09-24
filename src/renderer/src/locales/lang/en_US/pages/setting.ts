@@ -98,6 +98,7 @@ export default {
     confirm: '开始同步',
     success: '同步完成',
     fail: '同步失败',
+    empty: '没有可同步的数据',
   },
   site: {
     name: 'name',
