@@ -91,7 +91,7 @@ export default {
   },
   gateway: {
     title: '从网关同步源',
-    tip: '填写 TVBox 配置地址，经本地网关加载后写入 catvod[api] 源',
+    tip: '可选填 TVBox 配置地址让网关重新加载；留空则仅同步网关当前已加载的源',
     configUrl: '配置地址',
     gatewayBase: '网关地址',
     gatewayBaseTip: '默认 http://127.0.0.1:9979',

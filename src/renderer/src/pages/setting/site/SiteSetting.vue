@@ -144,7 +144,7 @@ const isVisible = reactive({
 })
 
 const gatewayForm = reactive({
-  configUrl: 'http://www.饭太硬.cc/tv',
+  configUrl: '',
   gatewayBase: 'http://127.0.0.1:9979',
   loading: false,
 });
