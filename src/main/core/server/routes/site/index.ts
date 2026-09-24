@@ -1,12 +1,98 @@
 import { FastifyReply, FastifyPluginAsync, FastifyRequest } from 'fastify';
+import fetch from 'node-fetch';
 import { enlightentHot, kyLiveHot } from './hot';
 import { classify, detail, get_hipy_play_url, get_drpy_play_url, check, search, list } from './cms';
 
 import { site, setting } from '../../../db/service';
 
 const API_VERSION = 'api/v1';
+const GATEWAY_DEFAULT = 'http://127.0.0.1:9979';
+
+async function gatewayJson(url: string, init?: any): Promise<any> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 120000);
+  try {
+    const res = await fetch(url, {
+      ...init,
+      signal: ac.signal,
+      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    });
+    const text = await res.text();
+    let body: any;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = { raw: text };
+    }
+    if (!res.ok) {
+      throw new Error(body?.message || body?.raw || `gateway ${res.status}`);
+    }
+    return body;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Load TVBox config into Gateway (optional) then mirror /sites as catvod[api] type8. */
+async function syncFromGateway(configUrl: string, gatewayBase: string) {
+  const base = (gatewayBase || GATEWAY_DEFAULT).replace(/\/$/, '');
+  if (configUrl) {
+    await gatewayJson(`${base}/config?url=${encodeURIComponent(configUrl)}`, { method: 'POST', body: '{}' });
+  }
+  const sitesRes = await gatewayJson(`${base}/sites`);
+  const list: any[] = Array.isArray(sitesRes?.data) ? sitesRes.data : [];
+  const existing = site.all() || [];
+  const byApi = new Map<string, any>();
+  for (const row of existing) {
+    if (row?.api) byApi.set(String(row.api), row);
+  }
+
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  for (const g of list) {
+    const key = g?.key;
+    if (!key || g.hide) {
+      skipped += 1;
+      continue;
+    }
+    const api = `${base}/${encodeURIComponent(key)}`;
+    const doc = {
+      name: g.name || key,
+      api,
+      type: 8,
+      search: g.searchable ? (g.quickSearch ? 1 : 2) : 0,
+      ext: '',
+      playUrl: '',
+      group: '网关',
+      categories: '',
+      isActive: true,
+    };
+    const hit = byApi.get(api);
+    if (hit?.id) {
+      await site.update(hit.id, doc);
+      updated += 1;
+    } else {
+      await site.add(doc);
+      created += 1;
+    }
+  }
+  return { gateway: base, total: list.length, created, updated, skipped };
+}
 
 const api: FastifyPluginAsync = async (fastify): Promise<void> => {
+  fastify.post(
+    `/${API_VERSION}/site/sync-gateway`,
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = (req.body || {}) as { configUrl?: string; gatewayBase?: string };
+        const res = await syncFromGateway(body.configUrl || '', body.gatewayBase || GATEWAY_DEFAULT);
+        reply.code(200).send(res);
+      } catch (err: any) {
+        reply.code(500).send({ message: err?.message || String(err) });
+      }
+    },
+  );
   fastify.post(
     `/${API_VERSION}/site`,
     async (req: FastifyRequest<{ Querystring: { [key: string]: string } }>, reply: FastifyReply) => {

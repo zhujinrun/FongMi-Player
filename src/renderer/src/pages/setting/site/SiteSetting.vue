@@ -7,6 +7,10 @@
             <add-icon />
             <span>{{ $t('pages.setting.header.add') }}</span>
           </div>
+          <div class="item" @click="isVisible.dialogGateway = true">
+            <link-icon />
+            <span>{{ $t('pages.setting.header.syncGateway') }}</span>
+          </div>
           <div class="item" @click="handleAllDataEvent('enable')">
             <check-icon />
             <span>{{ $t('pages.setting.header.enable') }}</span>
@@ -85,19 +89,45 @@
     </t-table>
     <dialog-add-view v-model:visible="isVisible.dialogAdd" :group="siteTableConfig.group" @add-table-data="tableAdd" />
     <dialog-edit-view v-model:visible="isVisible.dialogEdit" :data="formData" :group="siteTableConfig.group" />
+    <t-dialog v-model:visible="isVisible.dialogGateway" :header="$t('pages.setting.gateway.title')" placement="center"
+      :footer="false" :width="520">
+      <template #body>
+        <div class="dialog-container-padding">
+          <p class="content" style="margin-bottom: 12px; opacity: 0.75">{{ $t('pages.setting.gateway.tip') }}</p>
+          <t-form label-width="90" @submit="onSyncGateway">
+            <t-form-item :label="$t('pages.setting.gateway.configUrl')">
+              <t-input v-model="gatewayForm.configUrl" placeholder="http://www.饭太硬.cc/tv" />
+            </t-form-item>
+            <t-form-item :label="$t('pages.setting.gateway.gatewayBase')">
+              <t-input v-model="gatewayForm.gatewayBase" :placeholder="$t('pages.setting.gateway.gatewayBaseTip')" />
+            </t-form-item>
+            <t-form-item>
+              <t-space>
+                <t-button variant="outline" @click="isVisible.dialogGateway = false">
+                  {{ $t('pages.setting.dialog.cancel') }}
+                </t-button>
+                <t-button theme="primary" type="submit" :loading="gatewayForm.loading">
+                  {{ $t('pages.setting.gateway.confirm') }}
+                </t-button>
+              </t-space>
+            </t-form-item>
+          </t-form>
+        </div>
+      </template>
+    </t-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import _ from 'lodash';
 import PQueue from 'p-queue';
-import { AddIcon, CheckIcon, PoweroffIcon, RefreshIcon, RemoveIcon, SearchIcon } from 'tdesign-icons-vue-next';
+import { AddIcon, CheckIcon, LinkIcon, PoweroffIcon, RefreshIcon, RemoveIcon, SearchIcon } from 'tdesign-icons-vue-next';
 import { MessagePlugin } from 'tdesign-vue-next';
 import { onActivated, onMounted, ref, reactive, watch } from 'vue';
 
 import { t } from '@/locales';
 import { setDefault } from '@/api/setting';
-import { fetchSitePage, fetchSiteGroup, updateSiteItem, updateSiteStatus, delSiteItem } from '@/api/site';
+import { fetchSitePage, fetchSiteGroup, updateSiteItem, updateSiteStatus, delSiteItem, syncGatewaySites } from '@/api/site';
 import { checkValid } from '@/utils/cms';
 import emitter from '@/utils/emitter';
 
@@ -109,8 +139,35 @@ import DialogEditView from './components/DialogEdit.vue';
 // Define item form data & dialog status
 const isVisible = reactive({
   dialogAdd: false,
-  dialogEdit: false
+  dialogEdit: false,
+  dialogGateway: false,
 })
+
+const gatewayForm = reactive({
+  configUrl: 'http://www.饭太硬.cc/tv',
+  gatewayBase: 'http://127.0.0.1:9979',
+  loading: false,
+});
+
+const onSyncGateway = async () => {
+  gatewayForm.loading = true;
+  try {
+    const res: any = await syncGatewaySites({
+      configUrl: gatewayForm.configUrl?.trim() || '',
+      gatewayBase: gatewayForm.gatewayBase?.trim() || 'http://127.0.0.1:9979',
+    });
+    MessagePlugin.success(
+      `${t('pages.setting.gateway.success')}: +${res?.created ?? 0} ~${res?.updated ?? 0}`,
+    );
+    isVisible.dialogGateway = false;
+    refreshEvent(false);
+  } catch (err: any) {
+    console.error('[site][syncGateway]', err);
+    MessagePlugin.error(`${t('pages.setting.gateway.fail')}: ${err?.message || err}`);
+  } finally {
+    gatewayForm.loading = false;
+  }
+};
 
 const formData = ref();
 const searchValue = ref();

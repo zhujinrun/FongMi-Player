@@ -136,3 +136,12 @@ export function addSiteItem(doc) {
     data: doc,
   });
 }
+
+// 从 Gateway 同步 catvod[api] 源
+export function syncGatewaySites(doc: { configUrl?: string; gatewayBase?: string }) {
+  return request({
+    url: `/v1/site/sync-gateway`,
+    method: 'post',
+    data: doc,
+  });
+}
