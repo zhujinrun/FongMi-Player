@@ -4,6 +4,7 @@ out
 thumbnail
 .DS_Store
 *.log*
+*.tsbuildinfo
 
 # lock文件（yarn.lock 需提交给 Actions cache）
 package-lock.json

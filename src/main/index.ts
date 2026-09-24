@@ -18,6 +18,7 @@ import protocolResgin from './core/protocolResgin';
 import initServer from './core/server';
 import { createBossShortcut } from './core/shortcut';
 import { createMain } from './core/winManger';
+import { disposeGateway, getGatewaySettings, startGateway } from './core/gateway';
 import { parseCustomUrl } from './utils/tool';
 
 /**
@@ -188,6 +189,15 @@ app.whenReady().then(async () => {
   const shortcutsState: any = setting.find({ key: 'recordShortcut' }).value;
   if (shortcutsState) createBossShortcut(shortcutsState); // 快捷键
 
+  // gateway auto start (non-blocking)
+  try {
+    if (getGatewaySettings().autoStart) {
+      startGateway().catch(err => logger.error(`[gateway] autoStart failed: ${err}`));
+    }
+  } catch (err) {
+    logger.error(`[gateway] autoStart error: ${err}`);
+  }
+
   defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const { id, responseHeaders, statusCode } = details;
 
@@ -244,6 +254,14 @@ app.on('window-all-closed', () => {
   globalShortcut.unregisterAll();
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('will-quit', () => {
+  try {
+    disposeGateway();
+  } catch {
+    /* ignore */
   }
 });
 

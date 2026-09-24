@@ -4,9 +4,21 @@ import { enlightentHot, kyLiveHot } from './hot';
 import { classify, detail, get_hipy_play_url, get_drpy_play_url, check, search, list } from './cms';
 
 import { site, setting } from '../../../db/service';
+import { gatewayBase, getGatewaySettings } from '../../../gateway';
 
 const API_VERSION = 'api/v1';
 const GATEWAY_DEFAULT = 'http://127.0.0.1:9979';
+
+function resolveGatewayBase(explicit?: string): string {
+  if (explicit) return explicit.replace(/\/$/, '');
+  try {
+    const gw = getGatewaySettings();
+    if (gw?.port) return gatewayBase();
+  } catch {
+    /* ignore */
+  }
+  return GATEWAY_DEFAULT;
+}
 
 async function gatewayJson(url: string, init?: any): Promise<any> {
   const ac = new AbortController();
@@ -109,7 +121,7 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = (req.body || {}) as { configUrl?: string; gatewayBase?: string };
-        const res = await syncFromGateway(body.configUrl || '', body.gatewayBase || GATEWAY_DEFAULT);
+        const res = await syncFromGateway(body.configUrl || '', resolveGatewayBase(body.gatewayBase));
         reply.code(200).send(res);
       } catch (err: any) {
         reply.code(500).send({ message: err?.message || String(err) });

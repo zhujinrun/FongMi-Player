@@ -23,6 +23,7 @@ import {
   file,
   barrge,
   util,
+  gateway,
 } from './routes';
 import initConfig from './routes/catbox/config';
 
@@ -82,6 +83,7 @@ const initServer = async () => {
     server.register(file);
     server.register(barrge);
     server.register(util);
+    server.register(gateway);
 
     await server.listen({ port: 9978, host: '0.0.0.0' });
   } catch (err) {

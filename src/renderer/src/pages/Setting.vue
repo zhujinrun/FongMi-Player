@@ -45,6 +45,7 @@ const componentMap = {
   'analyzeSource': defineAsyncComponent(() => import('./setting/analyze/AnalyzeSetting.vue')),
   'driveSource': defineAsyncComponent(() => import('./setting/drive/DriveSetting.vue')),
   'editSource': defineAsyncComponent(() => import('./setting/editSource/Tool.vue')),
+  'gatewaySetting': defineAsyncComponent(() => import('./setting/gateway/GatewaySetting.vue')),
 };
 
 const storeSetting = useSettingStore();
@@ -70,6 +71,9 @@ const settingNav = computed(() => {
     }, {
       id: 'editSource',
       name: t('pages.setting.nav.editSource')
+    }, {
+      id: 'gatewaySetting',
+      name: t('pages.setting.nav.gatewaySetting')
     }
   ]
 });

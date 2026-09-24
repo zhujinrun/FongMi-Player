@@ -13,5 +13,6 @@ import lab from './lab';
 import file from './file';
 import barrge from './barrge';
 import util from './util';
+import gateway from './gateway';
 
-export { analyze, site, star, history, drive, setting, iptv, db, proxy, catbox, cache, lab, file, barrge, util };
+export { analyze, site, star, history, drive, setting, iptv, db, proxy, catbox, cache, lab, file, barrge, util, gateway };

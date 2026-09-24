@@ -101,5 +101,18 @@
   {
     "key": "debug",
     "value": false
+  },
+  {
+    "key": "gateway",
+    "value": {
+      "javaHome": "",
+      "host": "127.0.0.1",
+      "port": 9979,
+      "config": "",
+      "spider": "",
+      "dataDir": "",
+      "autoStart": false,
+      "token": ""
+    }
   }
 ]
