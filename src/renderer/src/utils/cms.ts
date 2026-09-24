@@ -133,7 +133,16 @@ const catvodRuleInit = async (site) => {
     url,
     data: site.ext ? JSON.parse(site.ext) : {},
   });
-  return res.data;
+  // body may be {} or {data:...}; success = got any JSON object
+  if (res && typeof res === 'object') return res;
+  if (res && typeof res === 'string') {
+    try {
+      return JSON.parse(res);
+    } catch {
+      return {};
+    }
+  }
+  return {};
 };
 
 /**

@@ -61,7 +61,7 @@
           <infinite-loading v-if="isVisible.infiniteLoading" class="infinite-loading-container" :identifier="infiniteId"
             :distance="200" @infinite="load">
             <template #complete>{{ infiniteCompleteTip }}</template>
-            <template #error>{{ $t('pages.film.infiniteLoading.complete') }}</template>
+            <template #error>{{ infiniteCompleteTip || $t('pages.film.infiniteLoading.netwotkError') }}</template>
           </infinite-loading>
         </div>
       </div>
@@ -162,6 +162,37 @@ const filter = ref({
 }) as any;
 
 const infiniteCompleteTip = ref(`${t('pages.film.infiniteLoading.noMore')}`);
+
+// per-site cache: switch source without full refetch
+const siteViewCache = new Map<string, any>();
+
+const saveSiteCache = (siteId: string) => {
+  if (!siteId) return;
+  siteViewCache.set(siteId, {
+    classData: JSON.parse(JSON.stringify(classConfig.value.data || [])),
+    filters: JSON.parse(JSON.stringify(filter.value?.data || [])),
+    list: JSON.parse(JSON.stringify(filmData.value.list || [])),
+    rawList: JSON.parse(JSON.stringify(filmData.value.rawList || [])),
+    pageIndex: pagination.value.pageIndex,
+    activeClass: active.value.class,
+    activeFilter: JSON.parse(JSON.stringify(active.value.filter || {})),
+    loadClass: isVisible.loadClass,
+  });
+};
+
+const restoreSiteCache = (siteId: string): boolean => {
+  const cached = siteViewCache.get(siteId);
+  if (!cached || !cached.list?.length) return false;
+  classConfig.value.data = cached.classData?.length ? cached.classData : [{ type_id: 0, type_name: '最新' }];
+  filter.value.data = cached.filters || [];
+  filmData.value = { list: cached.list, rawList: cached.rawList || cached.list };
+  pagination.value.pageIndex = Math.max(cached.pageIndex || 2, 2);
+  active.value.class = cached.activeClass ?? classConfig.value.data?.[0]?.type_id ?? 0;
+  if (cached.activeFilter) active.value.filter = cached.activeFilter;
+  isVisible.loadClass = true;
+  infiniteCompleteTip.value = t('pages.film.infiniteLoading.noMore');
+  return true;
+};
 
 const siteConfig = ref({
   default: {
@@ -473,9 +504,18 @@ const load = async ($state: { complete: () => void; loaded: () => void; error: (
       if (res.code === 200) isVisible.t3Work = true;
       else $state.error();
     } else if (defaultSite.type === 8 && !isVisible.catvod) {
-      const content = await catvodRuleInit(defaultSite);
-      if (typeof content === 'object') isVisible.catvod = true;
-      else $state.error();
+      try {
+        const content = await catvodRuleInit(defaultSite);
+        isVisible.catvod = content !== null && content !== undefined;
+      } catch (e) {
+        console.warn('[film] catvod init failed, continue load', e);
+        isVisible.catvod = true; // init is best-effort; list may still work
+      }
+      if (!isVisible.catvod) {
+        infiniteCompleteTip.value = t('pages.film.infiniteLoading.netwotkError');
+        $state.error();
+        return;
+      }
     };
 
     if (!isVisible.loadClass && !searchTxt.value) await getClassList(defaultSite); // 加载分类
@@ -589,8 +629,10 @@ const getSearchList = async () => {
 
 // 切换站点
 const changeSitesEvent = async (key: string) => {
+  const prevId = siteConfig.value.default?.id;
+  if (prevId && prevId !== key) saveSiteCache(prevId);
+
   isVisible.infiniteLoading = true;
-  isVisible.loadClass = false;
   isVisible.t3Work = false;
   if (siteConfig.value.default.type === 7) await t3RuleTerminate();
   isVisible.catvod = false;
@@ -599,7 +641,6 @@ const changeSitesEvent = async (key: string) => {
   const res = _.find(siteConfig.value.data, { id: key });
   active.value.nav = key;
   siteConfig.value.default = res;
-  classConfig.value.data = [{ type_id: 0, type_name: '最新' }];
   filmData.value = { list: [], rawList: [] };
   filter.value = {
     data: [],
@@ -612,8 +653,18 @@ const changeSitesEvent = async (key: string) => {
       year: '全部',
     },
   };
-  infiniteId.value++;
+  classConfig.value.data = [{ type_id: 0, type_name: '最新' }];
+  isVisible.loadClass = false;
   pagination.value.pageIndex = 1;
+  active.value.class = 0;
+
+  const hit = restoreSiteCache(key);
+  if (hit) {
+    console.log(`[film] site cache hit: ${key}`);
+  } else {
+    console.log(`[film] site cache miss: ${key}`);
+  }
+  infiniteId.value++;
   siteConfig.value.searchGroup = await searchGroup(siteConfig.value.search);
 };
 
