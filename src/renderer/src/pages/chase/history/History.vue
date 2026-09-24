@@ -205,9 +205,11 @@ const playEvent = async (item) => {
       await t3RuleInit(site);
     } else if (site.type === 8) await catvodRuleInit(site);
     if (!('vod_play_from' in item && 'vod_play_url' in item)) {
-      const [detailItem] = await fetchDetail(site, videoId);
-      item = detailItem;
+      const detail = await fetchDetail(site, videoId);
+      if (!detail?.[0]) throw new Error(`empty detail: id=${videoId}`);
+      item = detail[0];
     }
+    if (!item) throw new Error(`invalid detail item: id=${videoId}`);
 
     const playerMode = store.getSetting.playerMode;
 

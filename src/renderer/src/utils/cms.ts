@@ -860,24 +860,52 @@ const fetchDetail = async (site, id) => {
         vod_from,
         vod_url: [],
       };
-      return list;
+      return [list];
     }
 
-    const jsondata = json?.rss ?? json;
-    let videoList = jsondata.data || jsondata.list || [];
-    // 坑: 单条结果是dict 多条结果list
+    let jsondata: any = json?.rss ?? json;
+    if (typeof jsondata === 'string') {
+      try {
+        jsondata = JSON.parse(jsondata);
+      } catch {
+        jsondata = {};
+      }
+    }
+    if (!jsondata || typeof jsondata !== 'object') jsondata = {};
+
+    let videoList: any = [];
     if (site.type === 0) {
-      videoList = jsondata.list.video;
+      videoList = jsondata.list?.video ?? jsondata.list ?? [];
       if (!_.isArray(videoList)) videoList = [videoList];
       videoList = convertDetailList(videoList);
     } else if (site.type === 3) {
-      videoList = jsondata.data;
-      if (!_.isArray(videoList)) videoList = [videoList];
+      videoList = jsondata.data ?? jsondata.list ?? [];
+      if (!_.isArray(videoList)) videoList = videoList ? [videoList] : [];
     } else if (site.type === 4) {
-      videoList = jsondata.data.list;
+      videoList = jsondata.data?.list ?? jsondata.data ?? jsondata.list ?? [];
+      if (!_.isArray(videoList)) videoList = videoList ? [videoList] : [];
+    } else if (site.type === 8) {
+      const nested = jsondata.data?.list ?? jsondata.data?.data?.list;
+      if (_.isArray(nested)) {
+        videoList = nested;
+      } else if (_.isArray(jsondata.list)) {
+        videoList = jsondata.list;
+      } else if (_.isArray(jsondata.data)) {
+        videoList = jsondata.data;
+      } else if (jsondata.vod_id != null || jsondata.vod_name != null || jsondata.vod_play_from != null) {
+        videoList = [jsondata];
+      } else if (jsondata.data && typeof jsondata.data === 'object') {
+        const d = jsondata.data;
+        videoList = (d.vod_id != null || d.vod_name != null || d.vod_play_from != null) ? [d] : [];
+      } else {
+        videoList = [];
+      }
+    } else {
+      videoList = jsondata.list ?? jsondata.data ?? [];
+      if (!_.isArray(videoList)) videoList = videoList ? [videoList] : [];
     }
 
-    return videoList ? videoList : [];
+    return _.isArray(videoList) ? videoList.filter(Boolean) : [];
   } catch (err) {
     throw err;
   }

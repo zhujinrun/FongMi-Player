@@ -115,11 +115,21 @@ watch(
 
 onMounted(async () => {
   if (activeRouteName.value === 'FilmIndex') await getFilmSearhConfig();
+  if (!emitter.all.get('fillSearch')) {
+    emitter.on('fillSearch', (kw: string) => {
+      searchValue.value = kw || '';
+    });
+  }
 });
 
 onActivated(() => {
   const isListenedRefreshHotConfig = emitter.all.get('refreshHotConfig');
   if (!isListenedRefreshHotConfig) emitter.on('refreshHotConfig', refreshHotConfig);
+  if (!emitter.all.get('fillSearch')) {
+    emitter.on('fillSearch', (kw: string) => {
+      searchValue.value = kw || '';
+    });
+  }
 });
 
 const rowCol = [

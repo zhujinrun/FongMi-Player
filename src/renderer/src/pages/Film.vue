@@ -711,8 +711,29 @@ const changeSitesEvent = async (key: string) => {
   siteConfig.value.searchGroup = await searchGroup(siteConfig.value.search);
 };
 
+// msearch:###关键词?##封面@headers — TV 同类 id 不走详情，直接搜
+const parseMsearchKeyword = (id: string, fallback = '') => {
+  const m = String(id || '').match(/^msearch:###(.*?)(?:\?##|$)/);
+  const kw = (m?.[1] || '').trim();
+  return kw || String(fallback || '').trim();
+};
+
 // 播放
 const playEvent = async (item) => {
+  const rawId = String(item?.vod_id || '');
+  if (rawId.startsWith('msearch:')) {
+    // TV 同类：不取详情，用榜单片名填搜索框并聚搜
+    const kw = String(item?.vod_name || '').trim() || parseMsearchKeyword(rawId);
+    console.log(`[film][playEvent][msearch] -> search`, kw);
+    if (!kw) return;
+    const allSearchable = (siteConfig.value.data || []).filter((s) => s && Number(s.search) !== 0);
+    siteConfig.value.search = 'all';
+    siteConfig.value.searchGroup = allSearchable.length ? allSearchable : searchGroup('all');
+    emitter.emit('fillSearch', kw);
+    emitter.emit('searchFilm', { kw, group: 'all', filter: siteConfig.value.filter });
+    return;
+  }
+
   isVisible.loading = true;
 
   try {
@@ -739,8 +760,14 @@ const playEvent = async (item) => {
     }
 
     if (!('vod_play_from' in item && 'vod_play_url' in item)) {
-      const [detailItem] = await fetchDetail(site, item.vod_id);
-      item = detailItem;
+      const detail = await fetchDetail(site, item.vod_id);
+      if (!detail || !detail[0]?.vod_name && !detail[0]?.vod_play_from) {
+        throw new Error(`empty detail: site=${site?.key || site?.name || '?'} id=${item.vod_id}`);
+      }
+      item = detail[0];
+    }
+    if (!item?.vod_name && !item?.vod_play_from) {
+      throw new Error(`invalid detail item: site=${site?.key || site?.name || '?'} id=${item?.vod_id}`);
     }
 
     const playerMode = storePlayer.getSetting.playerMode;
@@ -757,7 +784,7 @@ const playEvent = async (item) => {
         },
       });
 
-      window.electron.ipcRenderer.send('openPlayWindow', item.vod_name);
+      window.electron.ipcRenderer.send('openPlayWindow', item.vod_name || '');
     }
   } catch (err) {
     console.error(`[film][playEvent][error]`, err);
