@@ -204,7 +204,7 @@ const onStart = async () => {
   if (status.value?.running || loading.start) return;
   loading.start = true;
   try {
-    status.value = await startGateway();
+    status.value = await startGateway(form.javaHome ? { javaHome: form.javaHome } : {});
     await MessagePlugin.success(t('pages.setting.gateway.startOk'));
   } catch (e: any) {
     await MessagePlugin.error(e?.message || t('pages.setting.gateway.startFail'));
@@ -232,7 +232,7 @@ const onRestart = async () => {
   if (loading.restart) return;
   loading.restart = true;
   try {
-    status.value = await restartGateway();
+    status.value = await restartGateway(form.javaHome ? { javaHome: form.javaHome } : {});
     await MessagePlugin.success(t('pages.setting.gateway.restartOk'));
   } catch (e: any) {
     await MessagePlugin.error(e?.message || t('pages.setting.gateway.restartFail'));

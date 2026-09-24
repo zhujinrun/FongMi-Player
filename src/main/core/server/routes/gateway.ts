@@ -38,9 +38,10 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
     }
   });
 
-  fastify.post(`/${API_VERSION}/gateway/start`, async (_req: FastifyRequest, reply: FastifyReply) => {
+  fastify.post(`/${API_VERSION}/gateway/start`, async (req: FastifyRequest, reply: FastifyReply) => {
     try {
-      reply.code(200).send(await startGateway());
+      const body = (req.body || {}) as Record<string, any>;
+      reply.code(200).send(await startGateway(body));
     } catch (err: any) {
       reply.code(500).send({ message: err?.message || String(err) });
     }
@@ -54,9 +55,10 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
     }
   });
 
-  fastify.post(`/${API_VERSION}/gateway/restart`, async (_req: FastifyRequest, reply: FastifyReply) => {
+  fastify.post(`/${API_VERSION}/gateway/restart`, async (req: FastifyRequest, reply: FastifyReply) => {
     try {
-      reply.code(200).send(await restartGateway());
+      const body = (req.body || {}) as Record<string, any>;
+      reply.code(200).send(await restartGateway(body));
     } catch (err: any) {
       reply.code(500).send({ message: err?.message || String(err) });
     }
@@ -67,7 +69,7 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = (req.body || {}) as { javaHome?: string };
-        const javaHome = body.javaHome ?? getGatewaySettings().javaHome;
+        const javaHome = body.javaHome || getGatewaySettings().javaHome;
         reply.code(200).send(await checkJava(String(javaHome || '')));
       } catch (err: any) {
         reply.code(500).send({ message: err?.message || String(err) });

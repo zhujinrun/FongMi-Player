@@ -22,11 +22,11 @@ export function saveGatewaySettings(data) {
   });
 }
 
-export function startGateway() {
+export function startGateway(data?: Record<string, any>) {
   return request({
     url: '/v1/gateway/start',
     method: 'post',
-    data: {},
+    data: data || {},
   });
 }
 
@@ -38,11 +38,11 @@ export function stopGateway() {
   });
 }
 
-export function restartGateway() {
+export function restartGateway(data?: Record<string, any>) {
   return request({
     url: '/v1/gateway/restart',
     method: 'post',
-    data: {},
+    data: data || {},
   });
 }
 

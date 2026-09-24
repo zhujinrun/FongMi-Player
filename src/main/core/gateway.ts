@@ -2,7 +2,7 @@ import { app } from 'electron';
 import { spawn, ChildProcess, execFile, exec } from 'child_process';
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
-import { join, isAbsolute } from 'path';
+import { join, isAbsolute, delimiter } from 'path';
 
 import logger from './logger';
 import { setting } from './db/service';
@@ -54,15 +54,20 @@ export function saveGatewaySettings(patch: Partial<GatewaySettings>): GatewaySet
 }
 
 function resolveJarPath(): string {
+  const name = process.platform === 'win32' ? 'gateway.jar' : 'gateway.jar';
   const candidates = [
-    join(app.getAppPath(), 'resources', 'gateway', 'gateway.jar'),
-    join(process.cwd(), 'resources', 'gateway', 'gateway.jar'),
+    join(process.resourcesPath || '', 'gateway', name),
+    join(process.resourcesPath || '', 'resources', 'gateway', name),
+    join(app.getAppPath(), 'resources', 'gateway', name),
+    join(process.cwd(), 'resources', 'gateway', name),
     join(__dirname, '../../resources/gateway/gateway.jar'),
+    join(__dirname, '../../../resources/gateway/gateway.jar'),
   ];
   for (const p of candidates) {
+    if (!p) continue;
     const real = p.includes('app.asar') ? p.replace('app.asar', 'app.asar.unpacked') : p;
     try {
-      if (fs.pathExistsSync(real)) return real;
+      if (real && fs.pathExistsSync(real)) return real;
     } catch {
       /* ignore */
     }
@@ -70,13 +75,82 @@ function resolveJarPath(): string {
   return '';
 }
 
+function findJavaInDir(dir: string): string {
+  const exe = process.platform === 'win32' ? 'java.exe' : 'java';
+  try {
+    if (dir && fs.pathExistsSync(join(dir, 'bin', exe))) return join(dir, 'bin', exe);
+    if (dir && fs.pathExistsSync(join(dir, exe))) return join(dir, exe);
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+function findJavaOnPath(): string {
+  const exe = process.platform === 'win32' ? 'java.exe' : 'java';
+  const pathEnv = process.env.PATH || process.env.Path || '';
+  for (const dir of pathEnv.split(delimiter)) {
+    if (!dir) continue;
+    try {
+      const p = join(dir.trim(), exe);
+      if (fs.pathExistsSync(p)) return p;
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+}
+
+function findJavaInCommon(): string {
+  if (process.platform !== 'win32') return '';
+  const roots = [
+    process.env['ProgramFiles'],
+    process.env['ProgramFiles(x86)'],
+    'C:\\Program Files',
+    'C:\\Program Files (x86)',
+    'D:\\Program Files',
+    'D:\\Program Files (x86)',
+  ].filter(Boolean) as string[];
+  const subdirs = ['Java', 'Eclipse Adoptium', 'Microsoft', 'Zulu', 'Amazon Corretto', 'BellSoft', 'Semeru'];
+  const hits: string[] = [];
+  for (const root of roots) {
+    for (const sub of subdirs) {
+      try {
+        const base = join(root, sub);
+        if (!fs.pathExistsSync(base)) continue;
+        for (const ent of fs.readdirSync(base)) {
+          hits.push(join(base, ent));
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  // 较新版本优先
+  hits.sort().reverse();
+  for (const h of hits) {
+    const bin = findJavaInDir(h);
+    if (bin) return bin;
+  }
+  return '';
+}
+
 function resolveJavaBin(javaHome: string): string {
   const home = (javaHome || '').trim();
   if (home) {
-    const bin = join(home, 'bin', process.platform === 'win32' ? 'java.exe' : 'java');
-    if (fs.pathExistsSync(bin)) return bin;
+    const bin = findJavaInDir(home);
+    if (bin) return bin;
   }
-  return 'java';
+  const fromJavaHome = (process.env.JAVA_HOME || '').trim();
+  if (fromJavaHome) {
+    const bin = findJavaInDir(fromJavaHome);
+    if (bin) return bin;
+  }
+  const fromPath = findJavaOnPath();
+  if (fromPath) return fromPath;
+  const fromCommon = findJavaInCommon();
+  if (fromCommon) return fromCommon;
+  return process.platform === 'win32' ? 'java.exe' : 'java';
 }
 
 function resolveDataDir(dataDir: string): string {
@@ -188,7 +262,7 @@ function appendLog(chunk: Buffer | string) {
   if (lastLog.length > 32000) lastLog = lastLog.slice(-16000);
 }
 
-export async function startGateway(): Promise<any> {
+export async function startGateway(override?: Partial<GatewaySettings>): Promise<any> {
   if (isRunning()) {
     return gatewayStatus();
   }
@@ -196,10 +270,18 @@ export async function startGateway(): Promise<any> {
   if (existing?.ok) {
     return gatewayStatus();
   }
-  const s = getGatewaySettings();
+  const base = getGatewaySettings();
+  const s: GatewaySettings = { ...base, ...(override || {}) };
+  if (typeof s.port === 'string') s.port = Number(s.port) || 9979;
   const jar = resolveJarPath();
   if (!jar) throw new Error('gateway.jar not found under resources/gateway');
   const javaBin = resolveJavaBin(s.javaHome);
+  const javaResolved = javaBin.includes('/') || javaBin.includes('\\');
+  if (!javaResolved && process.platform === 'win32') {
+    throw new Error(
+      'java.exe not found. Install JRE/JDK and set Java Home in gateway settings (e.g. C:\\Program Files\\Eclipse Adoptium\\jdk-21.x.x)',
+    );
+  }
   const dataDir = resolveDataDir(s.dataDir);
   await fs.ensureDir(dataDir);
 
@@ -211,7 +293,7 @@ export async function startGateway(): Promise<any> {
   logger.info(`[gateway] start ${javaBin} ${args.join(' ')}`);
   stopping = false;
   child = spawn(javaBin, args, {
-    cwd: app.getAppPath(),
+    cwd: process.resourcesPath || app.getAppPath(),
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
@@ -229,8 +311,9 @@ export async function startGateway(): Promise<any> {
     logger.info(`[gateway] ${String(d).trimEnd()}`);
   });
   child.on('error', err => {
-    appendLog(`spawn error: ${err.message}\n`);
-    logger.error(`[gateway] spawn error: ${err.message}`);
+    const msg = `spawn ${javaBin} failed: ${err.message}`;
+    appendLog(`${msg}\n`);
+    logger.error(`[gateway] ${msg}`);
     child = null;
   });
   child.on('exit', (code, signal) => {
@@ -287,9 +370,9 @@ export async function stopGateway(): Promise<any> {
   return gatewayStatus();
 }
 
-export async function restartGateway(): Promise<any> {
+export async function restartGateway(override?: Partial<GatewaySettings>): Promise<any> {
   if (isRunning()) await stopGateway();
-  return startGateway();
+  return startGateway(override);
 }
 
 export async function checkJava(javaHome: string): Promise<{ ok: boolean; version?: string; message?: string }> {
