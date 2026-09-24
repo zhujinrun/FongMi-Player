@@ -153,6 +153,7 @@ const catvodRuleInit = async (site) => {
 const fetchClassify = async (site) => {
   try {
     let url, classData, page, pagecount, limit, total, filters;
+    let homeList: any[] = [];
 
     if (site.type === 1 || site.type === 0) {
       url = buildUrl(site.api, `?ac=class`);
@@ -349,6 +350,7 @@ const fetchClassify = async (site) => {
       filters = {};
 
       classData = jsondata.class || [];
+      homeList = Array.isArray(jsondata.list) ? jsondata.list : [];
       filters = jsondata?.filters === undefined || jsondata.filters === null ? {} : jsondata.filters;
       if (!filters || typeof filters !== 'object' || Array.isArray(filters)) filters = {};
       Object.keys(filters).forEach((key) => {
@@ -369,6 +371,7 @@ const fetchClassify = async (site) => {
       limit,
       total,
       filters,
+      homeList,
     };
   } catch (err) {
     throw err;

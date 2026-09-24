@@ -425,7 +425,7 @@ const getClassList = async (site) => {
   try {
     const res = await fetchClassify(site);
 
-    const { pagecount, limit, total, classData, filters } = res;
+    const { pagecount, limit, total, classData, filters, homeList } = res;
     const { pageIndex, ...rest } = pagination.value;
     pagination.value = { pageIndex, ...rest, count: pagecount, pageSize: limit, total };
     filter.value.data = filters || {};
@@ -435,11 +435,9 @@ const getClassList = async (site) => {
 
     if (_.isEmpty(classDataFormat)) {
       if (hasCategoryConfig) {
-        // 用户配置了分类屏蔽，但一个都没匹配上
         infiniteCompleteTip.value = t('pages.film.infiniteLoading.categoryError');
         isVisible.loadClass = false;
       } else {
-        // 源本身无分类（网盘/搜索类）：用「最新」兜底，避免误报分类异常
         classConfig.value.data = [{ type_id: 0, type_name: '最新' }];
         active.value.class = 0;
         isVisible.loadClass = true;
@@ -452,9 +450,12 @@ const getClassList = async (site) => {
       if (!_.isEmpty(filters)) classFilter(filters);
       isVisible.loadClass = true;
     }
+
+    return { classReady: isVisible.loadClass, homeList: homeList || [] };
   } catch (err) {
     console.log(err);
     infiniteCompleteTip.value = t('pages.film.infiniteLoading.netwotkError');
+    return { classReady: false, homeList: [] };
   }
 };
 
@@ -485,7 +486,9 @@ const getFilmList = async () => {
     const newFilms = _.differenceWith(res, filmData.value.list, _.isEqual);
     filmData.value.list = [...filmData.value.list, ...newFilms];
     filmData.value.rawList = [...filmData.value.rawList, ...res];
-    pagination.value.pageIndex++;
+    if (newFilms.length > 0) {
+      pagination.value.pageIndex++;
+    }
     if (defaultSite.type === 0 || defaultSite.type === 1) filterEvent();
     length = newFilms.length;
     if (length > 0) {
@@ -517,25 +520,37 @@ const load = async ($state: { complete: () => void; loaded: () => void; error: (
       const res = await t3RuleInit(defaultSite);
       if (res.code === 200) isVisible.t3Work = true;
       else $state.error();
-    } else if (defaultSite.type === 8 && !isVisible.catvod) {
-      try {
-        const content = await catvodRuleInit(defaultSite);
-        isVisible.catvod = content !== null && content !== undefined;
-      } catch (e) {
-        console.warn('[film] catvod init failed, continue load', e);
-        isVisible.catvod = true; // init is best-effort; list may still work
-      }
-      if (!isVisible.catvod) {
-        infiniteCompleteTip.value = t('pages.film.infiniteLoading.netwotkError');
-        $state.error();
-        return;
-      }
-    };
+    }
+    // type8: gateway /init 基本是空对象，跳过省一跳 RTT
 
-    if (!isVisible.loadClass && !searchTxt.value) await getClassList(defaultSite); // 加载分类
-
-    const loadFunction = searchTxt.value ? getSearchList : getFilmList;
-    const resLength = await loadFunction(); // 动态加载数据
+    let resLength = 0;
+    if (searchTxt.value) {
+      resLength = await getSearchList();
+    } else if (!isVisible.loadClass) {
+      // 分类 + 列表并行（列表用当前/默认 tid，分类回来后必要时再补拉）
+      const seedTid = active.value.class ?? classConfig.value?.data?.[0]?.type_id ?? 0;
+      const [classInfo, listLen] = await Promise.all([
+        getClassList(defaultSite),
+        getFilmList(),
+      ]);
+      resLength = listLen;
+      if (
+        resLength === 0 &&
+        classInfo?.classReady &&
+        active.value.class !== seedTid &&
+        filmData.value.list.length === 0
+      ) {
+        resLength = await getFilmList();
+      }
+      if (resLength === 0 && classInfo?.homeList?.length) {
+        filmData.value.list = classInfo.homeList;
+        filmData.value.rawList = classInfo.homeList;
+        resLength = classInfo.homeList.length;
+        pagination.value.pageIndex = 2;
+      }
+    } else {
+      resLength = await getFilmList();
+    }
 
     if (resLength === 0 || filmData.value.list[0]?.vod_name === '无数据,防无限请求') {
       $state.complete();
