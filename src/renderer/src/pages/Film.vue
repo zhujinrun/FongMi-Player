@@ -385,19 +385,20 @@ const arrangeCmsYear = () => {
 };
 
 // 类别过滤
-const categoriesFilter = (classData: string[]): string[] => {
+const categoriesFilter = (classData: any[]): any[] => {
+  const list = Array.isArray(classData) ? classData : [];
   const { categories } = siteConfig.value.default;
-  if (!categories || categories.trim() === '') return classData;
+  if (!categories || categories.trim() === '') return list;
 
   const categoryList = categories.split(',').map((item) => item.trim());
-  const classDataList = classData.map((item) => item["type_name"]);
-  const categoriesInOrder: string[] = [];
+  const classDataList = list.map((item) => item["type_name"]);
+  const categoriesInOrder: any[] = [];
 
   for (const category of categoryList) {
     const isFind = classDataList.indexOf(category);
     if (isFind === -1) continue;
 
-    const foundCategory = classData.find((item) => item["type_name"] === category);
+    const foundCategory = list.find((item) => item["type_name"] === category);
     if (foundCategory) {
       categoriesInOrder.push(foundCategory);
     }
@@ -427,15 +428,25 @@ const getClassList = async (site) => {
     const { pagecount, limit, total, classData, filters } = res;
     const { pageIndex, ...rest } = pagination.value;
     pagination.value = { pageIndex, ...rest, count: pagecount, pageSize: limit, total };
-    filter.value.data = filters;
+    filter.value.data = filters || {};
 
-    const classDataFormat = categoriesFilter(classData);
-    classConfig.value.data = classDataFormat;
+    const classDataFormat = categoriesFilter(classData || []);
+    const hasCategoryConfig = !!(site.categories && String(site.categories).trim());
 
     if (_.isEmpty(classDataFormat)) {
-      infiniteCompleteTip.value = t('pages.film.infiniteLoading.categoryError');
-      isVisible.loadClass = false;
+      if (hasCategoryConfig) {
+        // 用户配置了分类屏蔽，但一个都没匹配上
+        infiniteCompleteTip.value = t('pages.film.infiniteLoading.categoryError');
+        isVisible.loadClass = false;
+      } else {
+        // 源本身无分类（网盘/搜索类）：用「最新」兜底，避免误报分类异常
+        classConfig.value.data = [{ type_id: 0, type_name: '最新' }];
+        active.value.class = 0;
+        isVisible.loadClass = true;
+        infiniteCompleteTip.value = t('pages.film.infiniteLoading.noMore');
+      }
     } else {
+      classConfig.value.data = classDataFormat;
       const classItem = classDataFormat[0];
       active.value.class = classItem["type_id"];
       if (!_.isEmpty(filters)) classFilter(filters);
@@ -477,6 +488,9 @@ const getFilmList = async () => {
     pagination.value.pageIndex++;
     if (defaultSite.type === 0 || defaultSite.type === 1) filterEvent();
     length = newFilms.length;
+    if (length > 0) {
+      infiniteCompleteTip.value = t('pages.film.infiniteLoading.noMore');
+    }
   } catch (err) {
     infiniteCompleteTip.value = t('pages.film.infiniteLoading.netwotkError');
     console.error(err);

@@ -348,20 +348,14 @@ const fetchClassify = async (site) => {
       total = 9999;
       filters = {};
 
-      classData = jsondata.class;
-      // if (classData) {
-      //   const category_url = buildUrl(site.api, `&extend=${site.ext}&ac=videolist&t=${classData[0].type_id}&pg=1`);
-      //   const category_res = await axios.get(category_url);
-      //   const category_json = category_res.data;
-      //   page = category_json.page;
-      //   pagecount = category_json.pagecount;
-      //   limit = parseInt(category_json.limit);
-      //   total = category_json.total;
-      // }
-      filters = jsondata?.filters === undefined ? [] : jsondata.filters;
+      classData = jsondata.class || [];
+      filters = jsondata?.filters === undefined || jsondata.filters === null ? {} : jsondata.filters;
+      if (!filters || typeof filters !== 'object' || Array.isArray(filters)) filters = {};
       Object.keys(filters).forEach((key) => {
-        filters[key].forEach((item) => {
-          if (!item.name) {
+        const group = filters[key];
+        if (!Array.isArray(group)) return;
+        group.forEach((item) => {
+          if (item && !item.name) {
             item.name = item.key;
           }
         });
