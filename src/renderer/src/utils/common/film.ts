@@ -294,11 +294,14 @@ const playHelper = async (snifferMode, url: string, site, analyze, flimSource, a
           extra = playData.extra;
           parse = playData.parse;
           break;
-        case 8:
-          // catvox获取服务端播放链接
+        case 8: {
+          // catvod 获取服务端播放链接（保留 header 给播放器）
           await catvodRuleInit(site);
-          playerUrl = await fetchCatvodPlayUrlHelper(site, flimSource, url);
+          const res: any = await fetchCatvodPlayUrl(site, flimSource, url);
+          playerUrl = res?.url || '';
+          if (res?.header && typeof res.header === 'object') headers = res.header;
           break;
+        }
       }
       if (!playerUrl) playerUrl = url; // 可能出现处理后是空链接
       if (analyze) {

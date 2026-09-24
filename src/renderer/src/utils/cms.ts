@@ -881,7 +881,7 @@ const fetchT3PlayUrl = async (flag: string, id: string, flags: string[] = []) =>
 };
 
 /**
- * catvod[nodejs]获取播放详情
+ * catvod[api]获取播放详情
  * @param {*} flag 资源配置
  * @param {*} id 播放源
  * @param {*} flags 播放地址

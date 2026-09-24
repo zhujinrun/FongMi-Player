@@ -101,6 +101,7 @@ const classify = async (id) => {
     const site = db_site.find({ id });
 
     let url;
+    let postData;
     if (site.type === 1 || site.type === 0) {
       url = buildUrl(site.api, `?ac=class`);
     } else if (site.type === 2) {
@@ -113,13 +114,19 @@ const classify = async (id) => {
       // url = buildUrl(site.api, `&t=1&ac=videolist`);
     } else if (site.type === 6) {
       url = buildUrl(site.api, `&extend=${site.ext}&filter=true`);
+    } else if (site.type === 8) {
+      url = buildUrl(site.api, `/home`);
     }
 
-    const response = await fetch(url);
-
     let json;
-    if (site.type === 0) json = parser.parse(await response.text());
-    else json = await response.json();
+    if (site.type === 8) {
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      json = await response.json();
+    } else {
+      const response = await fetch(url);
+      if (site.type === 0) json = parser.parse(await response.text());
+      else json = await response.json();
+    }
 
     const jsondata = json.rss || json;
     let classData, page, pagecount, limit, total, filters;
@@ -265,6 +272,13 @@ const classify = async (id) => {
         total = category_json['total'];
       }
       filters = jsondata?.filters === undefined ? [] : jsondata.filters;
+    } else if (site.type === 8) {
+      page = 1;
+      pagecount = 9999;
+      limit = 20;
+      total = 9999;
+      classData = jsondata.class || [];
+      filters = jsondata?.filters === undefined ? [] : jsondata.filters;
     }
 
     return {
@@ -321,6 +335,7 @@ const list = async (id, pg = 1, t, f = {}) => {
   try {
     const site = db_site.find({ id });
     let url;
+    let postData;
     if (site.type === 3) {
       url = buildUrl(site.api, `video?tid=${t}&pg=${pg}`);
       if (Object.keys(f).length !== 0) {
@@ -338,6 +353,9 @@ const list = async (id, pg = 1, t, f = {}) => {
         const base64 = Base64.stringify(words);
         url = buildUrl(url, `&ext=${base64}`);
       }
+    } else if (site.type === 8) {
+      url = buildUrl(site.api, `/category`);
+      postData = { id: t, page: pg, filters: f };
     } else {
       url = buildUrl(site.api, `?ac=videolist&t=${t}&pg=${pg}`);
       if (Object.keys(f).length !== 0 && site.type === 2) {
@@ -345,11 +363,19 @@ const list = async (id, pg = 1, t, f = {}) => {
       }
     }
 
-    const response = await fetch(url);
-
     let json;
-    if (site.type === 0) json = parser.parse(await response.text());
-    else json = await response.json();
+    if (site.type === 8) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+      });
+      json = await response.json();
+    } else {
+      const response = await fetch(url);
+      if (site.type === 0) json = parser.parse(await response.text());
+      else json = await response.json();
+    }
 
     const jsondata = json.rss || json;
     let videoList = jsondata.list || jsondata.data || [];
@@ -403,16 +429,28 @@ const search = async (id, wd) => {
     const site = db_site.find({ id });
 
     let url;
+    let postData;
     if (site.type === 3) url = buildUrl(site.api, `/search?text=${encodeURIComponent(wd)}`);
     else if (site.type === 5) url = `${reptileApiFormat(site.api, 'websearchurl')}${encodeURIComponent(wd)}`;
     else if (site.type === 6) url = buildUrl(site.api, `?wd=${encodeURIComponent(wd)}&extend=${site.ext}`);
-    else url = buildUrl(site.api, `?wd=${encodeURIComponent(wd)}`);
-
-    const response = await fetch(url);
+    else if (site.type === 8) {
+      url = buildUrl(site.api, `/search`);
+      postData = { wd, pg: 1 };
+    } else url = buildUrl(site.api, `?wd=${encodeURIComponent(wd)}`);
 
     let json;
-    if (site.type === 0) json = parser.parse(await response.text());
-    else json = await response.json();
+    if (site.type === 8) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+      });
+      json = await response.json();
+    } else {
+      const response = await fetch(url);
+      if (site.type === 0) json = parser.parse(await response.text());
+      else json = await response.json();
+    }
 
     if (site.type === 5) {
       const searchnamePat = reptileApiFormat(site.api, 'searchname');
@@ -513,6 +551,7 @@ const detail = async (key, id) => {
   try {
     const site = db_site.find({ id: key });
     let url;
+    let postData;
     if (site.type === 3) {
       url = buildUrl(site.api, `/video_detail?id=${id}`);
     } else if (site.type === 4) {
@@ -521,14 +560,26 @@ const detail = async (key, id) => {
       url = id.startsWith('http') ? id : `${reptileApiFormat(site.api, 'searchUrl')}${id}`;
     } else if (site.type === 6) {
       url = buildUrl(site.api, `?ac=detail&ids=${id}&extend=${site.ext}`);
+    } else if (site.type === 8) {
+      url = buildUrl(site.api, `/detail`);
+      postData = { id };
     } else {
       url = buildUrl(site.api, `?ac=detail&ids=${id}`);
     }
 
-    const response = await fetch(url);
     let json;
-    if (site.type === 0) json = parser.parse(await response.text());
-    else json = await response.json();
+    if (site.type === 8) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postData),
+      });
+      json = await response.json();
+    } else {
+      const response = await fetch(url);
+      if (site.type === 0) json = parser.parse(await response.text());
+      else json = await response.json();
+    }
 
     if (site.type === 5) {
       const detaillistPat = reptileApiFormat(site.api, 'detaillist');

@@ -67,7 +67,7 @@
         <span v-else-if="row.type === 2">drpy[js0]</span>
         <span v-else-if="row.type === 6">hipy[t4]</span>
         <span v-else-if="row.type === 7">js[t3]</span>
-        <span v-else-if="row.type === 8">catvod[nodejs]</span>
+        <span v-else-if="row.type === 8">catvod[api]</span>
         <span v-else-if="row.type === 3">app[v3]</span>
         <span v-else-if="row.type === 4">app[v1]</span>
       </template>

@@ -33,7 +33,7 @@ export const COLUMNS: PrimaryTableCol<TableRowData>[] = [
         { label: 'drpy[js0]', value: 2 },
         { label: 'hipy[t4]', value: 6 },
         { label: 'js[t3]', value: 7 },
-        { label: 'catvod[nodejs]', value: 8 },
+        { label: 'catvod[api]', value: 8 },
         { label: 'app[v3]', value: 3 },
         { label: 'app[v1]', value: 4 },
       ],

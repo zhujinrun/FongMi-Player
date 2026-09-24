@@ -217,7 +217,7 @@ playerUrl = fetchJxJsonPlayUrlHelper(site.playUrl, url)
 | `2` | drpy[js0] | 调用 drpy 302 redirect |
 | `6` | hipy[t4] | 调接口获取播放地址、脚本和扩展参数 |
 | `7` | js[t3] | 执行 t3 规则获取播放地址 |
-| `8` | catvod[nodejs] | POST `/play` 获取播放地址 |
+| `8` | catvod[api] | POST `/play` 获取播放地址 |
 
 资源站类型定义在站点设置中：【site/constants.ts】
 
