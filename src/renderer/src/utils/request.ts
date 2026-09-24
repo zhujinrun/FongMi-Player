@@ -32,8 +32,14 @@ service.interceptors.response.use(
 
 const request = async (config: AxiosRequestConfig) => {
   if (!config?.timeout) {
-    const TIMEOUT = getPinia('setting', 'timeout') < 1000 ? 1000 : getPinia('setting', 'timeout');
-    config.timeout = TIMEOUT;
+    const url = String(config?.url || '');
+    // Gateway catvod / absolute spider endpoints often need >5s
+    if (/^https?:\/\//i.test(url)) {
+      config.timeout = 60000;
+    } else {
+      const TIMEOUT = getPinia('setting', 'timeout') < 1000 ? 1000 : getPinia('setting', 'timeout');
+      config.timeout = TIMEOUT;
+    }
   }
   const { data } = await service.request(config);
   return data as any;
@@ -41,8 +47,13 @@ const request = async (config: AxiosRequestConfig) => {
 
 const requestComplete: any = async (config: AxiosRequestConfig) => {
   if (!config?.timeout) {
-    const TIMEOUT = getPinia('setting', 'timeout') < 1000 ? 1000 : getPinia('setting', 'timeout');
-    config.timeout = TIMEOUT;
+    const url = String(config?.url || '');
+    if (/^https?:\/\//i.test(url)) {
+      config.timeout = 60000;
+    } else {
+      const TIMEOUT = getPinia('setting', 'timeout') < 1000 ? 1000 : getPinia('setting', 'timeout');
+      config.timeout = TIMEOUT;
+    }
   }
   const { status, data, headers } = await service.request(config);
   return {

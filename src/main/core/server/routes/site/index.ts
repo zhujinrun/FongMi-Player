@@ -52,7 +52,9 @@ async function syncFromGateway(configUrl: string, gatewayBase: string) {
   let skipped = 0;
   for (const g of list) {
     const key = g?.key;
-    if (!key || g.hide) {
+    const gApi = String(g?.api || '');
+    // skip hide, pure JS drpy rules, and empty keys — gateway can't run them as csp jar
+    if (!key || g.hide || gApi.includes('.js')) {
       skipped += 1;
       continue;
     }

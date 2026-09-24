@@ -454,8 +454,16 @@ const getClassList = async (site) => {
     return { classReady: isVisible.loadClass, homeList: homeList || [] };
   } catch (err) {
     console.log(err);
-    infiniteCompleteTip.value = t('pages.film.infiniteLoading.netwotkError');
-    return { classReady: false, homeList: [] };
+    // 分类失败不直接判死：列表仍可能可用；仅在完全无数据时由 complete 提示
+    if (!isVisible.loadClass) {
+      classConfig.value.data = [{ type_id: 0, type_name: '最新' }];
+      active.value.class = 0;
+      isVisible.loadClass = true;
+    }
+    if (filmData.value.list.length === 0) {
+      infiniteCompleteTip.value = t('pages.film.infiniteLoading.netwotkError');
+    }
+    return { classReady: isVisible.loadClass, homeList: [] };
   }
 };
 
@@ -527,18 +535,20 @@ const load = async ($state: { complete: () => void; loaded: () => void; error: (
     if (searchTxt.value) {
       resLength = await getSearchList();
     } else if (!isVisible.loadClass) {
-      // 分类 + 列表并行（列表用当前/默认 tid，分类回来后必要时再补拉）
       const seedTid = active.value.class ?? classConfig.value?.data?.[0]?.type_id ?? 0;
-      const [classInfo, listLen] = await Promise.all([
+      const settled = await Promise.allSettled([
         getClassList(defaultSite),
         getFilmList(),
       ]);
-      resLength = listLen;
+      const classInfo =
+        settled[0].status === 'fulfilled' ? settled[0].value : { classReady: false, homeList: [] };
+      resLength = settled[1].status === 'fulfilled' ? settled[1].value : 0;
       if (
         resLength === 0 &&
         classInfo?.classReady &&
         active.value.class !== seedTid &&
-        filmData.value.list.length === 0
+        filmData.value.list.length === 0 &&
+        settled[1].status === 'fulfilled'
       ) {
         resLength = await getFilmList();
       }
@@ -547,6 +557,10 @@ const load = async ($state: { complete: () => void; loaded: () => void; error: (
         filmData.value.rawList = classInfo.homeList;
         resLength = classInfo.homeList.length;
         pagination.value.pageIndex = 2;
+      }
+      // class failed but list worked — clear network error tip
+      if (resLength > 0) {
+        infiniteCompleteTip.value = t('pages.film.infiniteLoading.noMore');
       }
     } else {
       resLength = await getFilmList();
