@@ -304,11 +304,13 @@ const checkAllSite = async (select) => {
 
 const checkSingleEvent = async (row, all = false) => {
   let isActive: boolean = row.isActive;
-  if (row.type === 7 || row.type === 8) {
+  if (row.type === 7) {
+    // t3 依赖 worker 全局态，检测成本高，保持跳过
     row.resource = -1;
   } else {
-    const { status, resource } = await checkValid(row); // 检测状态
-    row.isActive = isActive = status; // 检测是否开启变更状态
+    // type8 catvod[api] 与 cms 一样可走 fetchClassify 检测
+    const { status, resource } = await checkValid(row);
+    row.isActive = isActive = status;
     row.resource = resource;
     updateSiteItem(row.id, { isActive: row.isActive });
   };

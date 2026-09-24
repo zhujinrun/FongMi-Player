@@ -386,9 +386,42 @@ const fetchClassify = async (site) => {
 const checkValid = async (site) => {
   try {
     const data = await fetchClassify(site);
+    let status = !_.isEmpty(data.classData);
+    let resource: any = data.total;
+
+    if (site.type === 8) {
+      const homeList = data.homeList || [];
+      // type8 total 常为占位 9999，用 home/class/列表真实数量
+      if (!_.isEmpty(homeList)) {
+        status = true;
+        resource = homeList.length;
+      } else if (!_.isEmpty(data.classData)) {
+        status = true;
+        const tid = data.classData[0]?.type_id ?? 0;
+        try {
+          const list = await fetchList(site, 1, tid, {});
+          resource = _.isArray(list) ? list.length : 0;
+          if (resource === 0) resource = data.classData.length;
+        } catch {
+          resource = data.classData.length;
+        }
+      } else {
+        // 无分类也试列表（网盘等）
+        try {
+          const list = await fetchList(site, 1, 0, {});
+          resource = _.isArray(list) ? list.length : 0;
+          status = resource > 0;
+        } catch {
+          status = false;
+          resource = 0;
+        }
+      }
+      if (resource >= 9999) resource = homeList.length || data.classData.length || 1;
+    }
+
     return {
-      status: !_.isEmpty(data.classData),
-      resource: data.total,
+      status,
+      resource,
     };
   } catch (err) {
     console.error(err);
