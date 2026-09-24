@@ -1,6 +1,6 @@
 {
   "name": "fmplayer",
-  "version": "3.3.7",
+  "version": "1.0.0",
   "description": "simple and lightweight video client",
   "main": "./out/main/index.js",
   "author": {
