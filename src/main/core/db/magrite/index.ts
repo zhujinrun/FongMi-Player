@@ -37,10 +37,16 @@ const magrite = () => {
   logger.info(`[db][magrite][version][current:${currentVersion}][last:${lastVersion}]`);
 
   if (compareVersion(currentVersion, lastVersion) === 1) {
+    const legacy = !currentVersion || currentVersion.startsWith('3.');
     if (!currentVersion) update3_3_1_to3_3_2();
-    if (compareVersion(currentVersion, '3.3.4') === 1) update3_3_3_to3_3_4();
-    if (compareVersion(currentVersion, '3.3.5') === 1) update3_3_4_to3_3_5();
-    if (compareVersion(currentVersion, '3.3.7') === 1) update3_3_6_to3_3_7();
+    if (legacy) {
+      if (compareVersion(currentVersion, '3.3.4') === 1) update3_3_3_to3_3_4();
+      if (compareVersion(currentVersion, '3.3.5') === 1) update3_3_4_to3_3_5();
+      if (compareVersion(currentVersion, '3.3.7') === 1) update3_3_6_to3_3_7();
+    } else {
+      db.get('tbl_setting').find({ key: 'version' }).assign({ key: 'version', value: lastVersion }).write();
+      logger.info(`[db][magrite] version updated to ${lastVersion}`);
+    }
   }
 
   logger.info(`[db][magrite]magrite completed`);
