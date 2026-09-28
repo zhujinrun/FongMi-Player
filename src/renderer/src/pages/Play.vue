@@ -452,6 +452,10 @@ const downloadDialogData = ref({ season: '', current: '' });
 
 const player = shallowRef(null); // 重要, proxy对象art播放器报错
 
+// 切集/进度监听互斥与重注册定时器
+let switching = false;
+let reRegisterTimer: ReturnType<typeof setTimeout> | null = null;
+
 const tmp = reactive({
   skipTime: 0,
   url: "",
@@ -460,6 +464,7 @@ const tmp = reactive({
   preloadLoading: false,
   preloadBarrage: [],
   preloadSourceUrl: '',
+  preloadIndex: '',
   playerHeaders: {}
 }) as any;
 
@@ -553,6 +558,11 @@ onMounted(() => {
 const createPlayer = async (url: string, videoType: string = '') => {
   tmp.url = url;
   const { playerMode } = set.value;
+
+  if (reRegisterTimer) {
+    clearTimeout(reRegisterTimer);
+    reRegisterTimer = null;
+  }
 
   const containers = {
     xgplayer: 'mse',
@@ -767,7 +777,7 @@ const initFilmPlayer = async (isFirst) => {
   const analyze = snifferAnalyze.value;
   const response = await filmPlayAndHandleResponse(snifferMode, url, site, analyze, active.flimSource, skipAd);
   if (response?.url) {
-    createPlayer(response!.url, response!.mediaType! || '');
+    await createPlayer(response!.url, response!.mediaType! || '');
   }
 };
 
@@ -803,57 +813,69 @@ const getDetailInfo = async (): Promise<void> => {
 
 // 切换选集
 const changeEvent = async (item) => {
-  active.filmIndex = item;
+  if (switching) return;
+  switching = true;
+  if (reRegisterTimer) {
+    clearTimeout(reRegisterTimer);
+    reRegisterTimer = null;
+  }
+  try {
+    active.filmIndex = item;
 
-  // 当前源dataHistory.value.siteSource 选择源active.flimSource；当前集dataHistory.value.videoIndex 选择源index
-  // 1. 同源 不同集 变   return true
-  // 2. 同源 同集 不变   return true
-  // 3. 不同源 不同集 变 return true
-  // 4. 不同源 同集 不变 return true
-  // 待优化 不同源的index不同，要重新索引  但是 综艺不对应
-  if (dataHistory.value["siteSource"] === active.flimSource) {  // 同源
-    if (formatIndex(dataHistory.value["videoIndex"]).index !== formatIndex(active.filmIndex).index) {
+    // 当前源dataHistory.value.siteSource 选择源active.flimSource；当前集dataHistory.value.videoIndex 选择源index
+    // 1. 同源 不同集 变   return true
+    // 2. 同源 同集 不变   return true
+    // 3. 不同源 不同集 变 return true
+    // 4. 不同源 同集 不变 return true
+    // 待优化 不同源的index不同，要重新索引  但是 综艺不对应
+    if (dataHistory.value["siteSource"] === active.flimSource) {  // 同源
+      if (formatIndex(dataHistory.value["videoIndex"]).index !== formatIndex(active.filmIndex).index) {
+        VIDEO_PROCESS_DOC.watchTime = 0;
+        VIDEO_PROCESS_DOC.playEnd = false;
+      };
+    } else if (formatIndex(dataHistory.value["videoIndex"]).index !== formatIndex(active.filmIndex).index) { // 不同源
       VIDEO_PROCESS_DOC.watchTime = 0;
       VIDEO_PROCESS_DOC.playEnd = false;
     };
-  } else if (formatIndex(dataHistory.value["videoIndex"]).index !== formatIndex(active.filmIndex).index) { // 不同源
-    VIDEO_PROCESS_DOC.watchTime = 0;
-    VIDEO_PROCESS_DOC.playEnd = false;
-  };
 
-  await putHistory();
+    await putHistory();
 
-  if (tmp.preloadNext?.url && set.value.preloadNext) {
-    const { playerMode } = set.value;
+    if (tmp.preloadNext?.url && tmp.preloadIndex === item && set.value.preloadNext) {
+      const { playerMode } = set.value;
 
-    await offPlayerTimeUpdate(player.value, playerMode.type);
-    await playerNext(player.value, playerMode.type, tmp.preloadNext);
-    if (tmp.preloadBarrage.length > 0) {
-      await offPlayerBarrage(player.value, playerMode.type);
-      const options = set.value.barrage;
-      if (playerMode.type === 'dplayer') {
-        playerBarrage(player.value, playerMode.type, tmp.preloadSourceUrl, options, tmp.preloadSourceUrl);
-      } else {
-        playerBarrage(player.value, playerMode.type, tmp.preloadBarrage, options, tmp.preloadSourceUrl);
+      await offPlayerTimeUpdate(player.value, playerMode.type);
+      await playerNext(player.value, playerMode.type, tmp.preloadNext);
+      if (tmp.preloadBarrage.length > 0) {
+        await offPlayerBarrage(player.value, playerMode.type);
+        const options = set.value.barrage;
+        if (playerMode.type === 'dplayer') {
+          playerBarrage(player.value, playerMode.type, tmp.preloadSourceUrl, options, tmp.preloadSourceUrl);
+        } else {
+          playerBarrage(player.value, playerMode.type, tmp.preloadBarrage, options, tmp.preloadSourceUrl);
+        };
+        tmp.preloadBarrage = [];
       };
-      tmp.preloadBarrage = [];
-    };
-    if (set.value.skipStartEnd) {
-      await playerSeek(player.value, playerMode.type, skipConfig.value.skipTimeInStart);
-    };
-    setSystemMediaInfo(); // 更新系统媒体信息
-    setTimeout(async () => {
-      await timerUpdatePlayProcess();
-    }, 1500);
-  } else {
-    await destroyPlayer();
-    await initFilmPlayer(true);
-  }
+      if (set.value.skipStartEnd) {
+        await playerSeek(player.value, playerMode.type, skipConfig.value.skipTimeInStart);
+      };
+      setSystemMediaInfo(); // 更新系统媒体信息
+      reRegisterTimer = setTimeout(async () => {
+        reRegisterTimer = null;
+        await timerUpdatePlayProcess();
+      }, 1500);
+    } else {
+      await destroyPlayer();
+      await initFilmPlayer(true);
+    }
 
-  tmp.preloadLoading = false;
-  tmp.preloadNext = {};
-  tmp.sourceUrl = tmp.preloadSourceUrl;
-  tmp.preloadSourceUrl = '';
+    tmp.preloadLoading = false;
+    tmp.preloadNext = {};
+    tmp.preloadIndex = '';
+    tmp.sourceUrl = tmp.preloadSourceUrl;
+    tmp.preloadSourceUrl = '';
+  } finally {
+    switching = false;
+  }
 };
 
 // 提前获取下一集链接
@@ -861,6 +883,7 @@ const preloadNext = async (item: string) => {
   const url = formatIndex(item).url;
 
   tmp.preloadSourceUrl = url;
+  tmp.preloadIndex = item;
 
   const { snifferMode, skipAd } = set.value;
   const { site } = ext.value;
@@ -882,10 +905,12 @@ const fetchRecommend = async () => {
 };
 
 // 定时更新播放进度
-const timerUpdatePlayProcess = () => {
+const timerUpdatePlayProcess = async () => {
   const { playerMode } = set.value;
   const { siteSource } = dataHistory.value;
   let index = 0;
+
+  if (player.value) await offPlayerTimeUpdate(player.value, playerMode.type);
 
   const isLast = () => {
     if (isVisible.reverseOrder) {
@@ -914,8 +939,9 @@ const timerUpdatePlayProcess = () => {
     VIDEO_PROCESS_DOC.duration = duration;
 
     const watchTime = set.value.skipStartEnd ? currentTime + skipConfig.value.skipTimeInEnd : currentTime;
-    if (watchTime >= duration && duration !== 0) autoPlayNext();
-    else putHistory();
+    if (watchTime >= duration && duration !== 0) {
+      if (!switching) autoPlayNext();
+    } else putHistory();
 
     // 预加载下一步链接 提前30秒预加载
     if (watchTime + 30 >= duration && duration !== 0) {
@@ -930,7 +956,7 @@ const timerUpdatePlayProcess = () => {
     if (getLocalStorage('player:process')) console.log(`[player][timeUpdate] - current:${currentTime}; watch:${watchTime}; duration:${duration}; percentage:${Math.trunc((currentTime / duration) * 100)}%`);
   };
 
-  playerTimeUpdate(player.value, playerMode.type, ({ currentTime, duration }) => {
+  await playerTimeUpdate(player.value, playerMode.type, ({ currentTime, duration }) => {
     index = season.value[siteSource].indexOf(active.filmIndex);
     onTimeUpdate(currentTime, duration);
   });
