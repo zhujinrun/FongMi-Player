@@ -53,3 +53,12 @@ export function checkGatewayJava(javaHome?: string) {
     data: { javaHome: javaHome || '' },
   });
 }
+
+export function applyGatewayConfig(data: { configUrl: string; gatewayBase?: string }) {
+  return request({
+    url: '/v1/gateway/apply-config',
+    method: 'post',
+    data,
+    timeout: 180000,
+  });
+}

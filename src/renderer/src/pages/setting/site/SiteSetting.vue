@@ -96,7 +96,14 @@
           <p class="content" style="margin-bottom: 12px; opacity: 0.75">{{ $t('pages.setting.gateway.tip') }}</p>
           <t-form label-width="90" @submit="onSyncGateway">
             <t-form-item :label="$t('pages.setting.gateway.configUrl')">
-              <t-input v-model="gatewayForm.configUrl" placeholder="http://www.饭太硬.cc/tv" />
+              <t-select
+                v-model="gatewayForm.configUrl"
+                :options="configOptions"
+                filterable
+                creatable
+                clearable
+                placeholder="http://www.饭太硬.cc/tv"
+              />
             </t-form-item>
             <t-form-item :label="$t('pages.setting.gateway.gatewayBase')">
               <t-input v-model="gatewayForm.gatewayBase" :placeholder="$t('pages.setting.gateway.gatewayBaseTip')" />
@@ -127,6 +134,7 @@ import { onActivated, onMounted, ref, reactive, watch } from 'vue';
 
 import { t } from '@/locales';
 import { setDefault } from '@/api/setting';
+import { fetchGatewaySettings } from '@/api/gateway';
 import { fetchSitePage, fetchSiteGroup, updateSiteItem, updateSiteStatus, delSiteItem, syncGatewaySites } from '@/api/site';
 import { checkValid } from '@/utils/cms';
 import emitter from '@/utils/emitter';
@@ -149,6 +157,36 @@ const gatewayForm = reactive({
   loading: false,
 });
 
+const configOptions = ref<{ label: string; value: string }[]>([]);
+
+const loadConfigOptions = async () => {
+  try {
+    const s = (await fetchGatewaySettings()) as {
+      config?: string;
+      configHistory?: { name?: string; url?: string }[];
+    };
+    const list = Array.isArray(s?.configHistory) ? s.configHistory : [];
+    const opts = list
+      .map((x) => ({
+        label: String(x?.name || '').trim() || String(x?.url || ''),
+        value: String(x?.url || '').trim(),
+      }))
+      .filter((x) => x.value);
+    const cur = String(s?.config || '').trim();
+    if (cur && !opts.some((o) => o.value === cur)) opts.unshift({ label: cur, value: cur });
+    configOptions.value = opts;
+  } catch {
+    configOptions.value = [];
+  }
+};
+
+watch(
+  () => isVisible.dialogGateway,
+  (open) => {
+    if (open) loadConfigOptions();
+  },
+);
+
 const onSyncGateway = async () => {
   const base = gatewayForm.gatewayBase?.trim() || 'http://127.0.0.1:9979';
   const configUrl = gatewayForm.configUrl?.trim() || '';
@@ -162,12 +200,13 @@ const onSyncGateway = async () => {
     const res: any = await syncGatewaySites({ configUrl, gatewayBase: base });
     const created = res?.created ?? 0;
     const updated = res?.updated ?? 0;
+    const removed = res?.removed ?? 0;
     const total = res?.total ?? 0;
-    if (!total && !created && !updated) {
+    if (!total && !created && !updated && !removed) {
       MessagePlugin.warning(t('pages.setting.gateway.empty'));
     } else {
       MessagePlugin.success(
-        `${t('pages.setting.gateway.success')}: 网关${total} · +${created} ~${updated}`,
+        `${t('pages.setting.gateway.success')}: 网关${total} · +${created} ~${updated} -${removed}`,
       );
     }
     isVisible.dialogGateway = false;

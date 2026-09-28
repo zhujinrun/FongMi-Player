@@ -83,11 +83,19 @@
       </t-form-item>
 
       <t-form-item :label="$t('pages.setting.gateway.config')" name="config">
-        <t-input
-          v-model="form.config"
-          :placeholder="$t('pages.setting.gateway.configPlaceholder')"
-          :style="{ width: '420px', maxWidth: '100%' }"
-        />
+        <t-space align="center">
+          <t-select
+            v-model="form.config"
+            :options="configOptions"
+            filterable
+            creatable
+            :placeholder="$t('pages.setting.gateway.configPlaceholder')"
+            :style="{ width: '420px', maxWidth: '100%' }"
+          />
+          <span class="title" :class="{ disabled: loading.apply }" @click="onApplyConfig">
+            {{ $t('pages.setting.gateway.apply') }}
+          </span>
+        </t-space>
       </t-form-item>
 
       <t-form-item :label="$t('pages.setting.gateway.spider')" name="spider">
@@ -135,6 +143,7 @@ import { MessagePlugin } from 'tdesign-vue-next';
 
 import { t } from '@/locales';
 import {
+  applyGatewayConfig,
   checkGatewayJava,
   fetchGatewayStatus,
   restartGateway,
@@ -142,12 +151,15 @@ import {
   startGateway,
   stopGateway,
 } from '@/api/gateway';
+import { syncGatewaySites } from '@/api/site';
+import emitter from '@/utils/emitter';
 
 const form = reactive({
   javaHome: '',
   host: '127.0.0.1',
   port: 9979,
   config: '',
+  configHistory: [] as { name: string; url: string }[],
   spider: '',
   dataDir: '',
   autoStart: false,
@@ -162,6 +174,7 @@ const loading = reactive({
   restart: false,
   refresh: false,
   save: false,
+  apply: false,
   checkJava: false,
 });
 
@@ -179,12 +192,22 @@ const statusText = computed(() => {
   return t('pages.setting.gateway.stopped');
 });
 
+const configOptions = computed(() => {
+  const list = [...(form.configHistory || [])];
+  const cur = (form.config || '').trim();
+  if (cur && !list.some(x => x?.url === cur)) list.unshift({ name: cur, url: cur });
+  return list
+    .filter(x => x?.url)
+    .map(x => ({ label: x.name === x.url ? x.url : x.name, value: x.url }));
+});
+
 const applySettings = (s: any) => {
   if (!s) return;
   form.javaHome = s.javaHome || '';
   form.host = s.host || '127.0.0.1';
   form.port = Number(s.port) || 9979;
   form.config = s.config || '';
+  form.configHistory = Array.isArray(s.configHistory) ? s.configHistory : [];
   form.spider = s.spider || '';
   form.dataDir = s.dataDir || '';
   form.autoStart = !!s.autoStart;
@@ -262,6 +285,56 @@ const onCheckJava = async () => {
     javaResult.value = { ok: false, message: e?.message || String(e) };
   } finally {
     loading.checkJava = false;
+  }
+};
+
+// 应用配置：POST /config 热切换 → 替换式同步站点 → 刷新首页/站点表
+const onApplyConfig = async () => {
+  if (loading.apply) return;
+  const configUrl = (form.config || '').trim();
+  if (!configUrl) {
+    await MessagePlugin.warning(t('pages.setting.gateway.configRequired'));
+    return;
+  }
+  loading.apply = true;
+  try {
+    const res = (await applyGatewayConfig({ configUrl })) as {
+      applied?: boolean;
+      configHistory?: { name: string; url: string }[];
+      message?: string;
+    };
+    if (Array.isArray(res?.configHistory)) form.configHistory = res.configHistory;
+    if (!res?.applied) {
+      await MessagePlugin.warning(res?.message || t('pages.setting.gateway.applyFail'));
+      return;
+    }
+    let tip = t('pages.setting.gateway.applyOk');
+    try {
+      const sync = (await syncGatewaySites({ configUrl: '' })) as {
+        total?: number;
+        created?: number;
+        updated?: number;
+        removed?: number;
+      };
+      tip = `${tip}: 网关${sync?.total ?? 0} · +${sync?.created ?? 0} ~${sync?.updated ?? 0} -${sync?.removed ?? 0}`;
+    } catch (e) {
+      await MessagePlugin.warning(
+        `${t('pages.setting.gateway.applyOk')} · ${t('pages.setting.gateway.fail')}: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+      return;
+    }
+    await MessagePlugin.success(tip);
+    emitter.emit('refreshFilmConfig');
+    emitter.emit('refreshSiteTable');
+  } catch (e) {
+    await MessagePlugin.error(
+      e instanceof Error ? e.message : t('pages.setting.gateway.applyFail'),
+    );
+  } finally {
+    loading.apply = false;
+    refresh(false);
   }
 };
 

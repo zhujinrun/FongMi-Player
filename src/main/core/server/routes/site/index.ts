@@ -4,7 +4,7 @@ import { enlightentHot, kyLiveHot } from './hot';
 import { classify, detail, get_hipy_play_url, get_drpy_play_url, check, search, list } from './cms';
 
 import { site, setting } from '../../../db/service';
-import { gatewayBase, getGatewaySettings } from '../../../gateway';
+import { gatewayBase, getGatewaySettings, saveGatewaySettings } from '../../../gateway';
 
 const API_VERSION = 'api/v1';
 const GATEWAY_DEFAULT = 'http://127.0.0.1:9979';
@@ -77,6 +77,7 @@ async function syncFromGateway(configUrl: string, gatewayBase: string) {
     if (row?.api) byApi.set(String(row.api), row);
   }
 
+  const keepApi = new Set<string>();
   let created = 0;
   let updated = 0;
   let skipped = 0;
@@ -89,6 +90,7 @@ async function syncFromGateway(configUrl: string, gatewayBase: string) {
       continue;
     }
     const api = `${base}/${encodeURIComponent(key)}`;
+    keepApi.add(api);
     const doc = {
       name: g.name || key,
       api,
@@ -109,10 +111,27 @@ async function syncFromGateway(configUrl: string, gatewayBase: string) {
       created += 1;
     }
   }
-  if (created + updated === 0) {
+  // 替换式同步：清掉上一个源残留的网关行（只动 group='网关' 且 api 指向本网关的行）
+  // 注意 site.all() 返回的是 live 数组，必须先筛选出快照再删，否则边遍历边 splice 会漏删
+  let removed = 0;
+  const prefix = `${base}/`;
+  const stale = existing.filter((row) => {
+    const a = String(row?.api || '');
+    if (!a.startsWith(prefix)) return false;
+    if (keepApi.has(a)) return false;
+    if (row?.group !== '网关') return false;
+    return !!row?.id;
+  });
+  for (const row of stale) {
+    await site.remove(row.id);
+    removed += 1;
+  }
+  // 记住当前源，供下次启动 --config 与配置下拉使用
+  if (configUrl) saveGatewaySettings({ config: String(configUrl).trim() });
+  if (created + updated + removed === 0) {
     throw new Error('同步未写入任何源（可能全部被跳过）');
   }
-  return { gateway: base, total: list.length, created, updated, skipped };
+  return { gateway: base, total: list.length, created, updated, skipped, removed };
 }
 
 const api: FastifyPluginAsync = async (fastify): Promise<void> => {

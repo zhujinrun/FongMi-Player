@@ -7,27 +7,69 @@ import { join, isAbsolute, delimiter } from 'path';
 import logger from './logger';
 import { setting } from './db/service';
 
+export type GatewayConfigSource = {
+  name: string;
+  url: string;
+};
+
 export type GatewaySettings = {
   javaHome: string;
   host: string;
   port: number;
   config: string;
+  configHistory: GatewayConfigSource[];
   spider: string;
   dataDir: string;
   autoStart: boolean;
   token: string;
 };
 
+const DEFAULT_CONFIG_HISTORY: GatewayConfigSource[] = [
+  { name: '饭太硬', url: 'http://www.饭太硬.cc/tv' },
+  { name: '王二小', url: 'http://tvbox.王二小放牛娃.top' },
+];
+
 const DEFAULTS: GatewaySettings = {
   javaHome: '',
   host: '127.0.0.1',
   port: 9979,
   config: '',
+  configHistory: DEFAULT_CONFIG_HISTORY,
   spider: '',
   dataDir: '',
   autoStart: false,
   token: '',
 };
+
+export function configNameOf(url: string): string {
+  const raw = String(url || '').trim();
+  const m = raw.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/([^/?#]+)/);
+  return m ? m[1] : raw;
+}
+
+export function mergeConfigHistory(history: unknown, config?: string): GatewayConfigSource[] {
+  const list: GatewayConfigSource[] = [];
+  const seen = new Set<string>();
+  const push = (h: unknown) => {
+    const rec = (h || {}) as { url?: unknown; name?: unknown };
+    const url = String(rec.url || '').trim();
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    list.push({ name: String(rec.name || '').trim() || configNameOf(url), url });
+  };
+  if (Array.isArray(history)) history.forEach(push);
+  const cur = String(config || '').trim();
+  if (cur) {
+    const idx = list.findIndex(x => x.url === cur);
+    if (idx > 0) {
+      const [hit] = list.splice(idx, 1);
+      list.unshift(hit);
+    } else if (idx < 0) {
+      list.unshift({ name: configNameOf(cur), url: cur });
+    }
+  }
+  return list.slice(0, 50);
+}
 
 let child: ChildProcess | null = null;
 let stopping = false;
@@ -44,6 +86,7 @@ export function getGatewaySettings(): GatewaySettings {
 export function saveGatewaySettings(patch: Partial<GatewaySettings>): GatewaySettings {
   const next = { ...getGatewaySettings(), ...patch };
   if (typeof next.port === 'string') next.port = Number(next.port) || 9979;
+  next.configHistory = mergeConfigHistory(next.configHistory, next.config);
   const existing = setting.find({ key: 'gateway' });
   if (existing?.key === 'gateway') {
     setting.update_data('gateway', { value: next });

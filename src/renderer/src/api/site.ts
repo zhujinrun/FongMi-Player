@@ -143,5 +143,6 @@ export function syncGatewaySites(doc: { configUrl?: string; gatewayBase?: string
     url: `/v1/site/sync-gateway`,
     method: 'post',
     data: doc,
+    timeout: 180000,
   });
 }
