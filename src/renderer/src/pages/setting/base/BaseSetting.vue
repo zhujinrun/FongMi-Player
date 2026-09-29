@@ -256,7 +256,7 @@ const theme = computed(() => {
 });
 
 const formData = ref({
-  version: '1.1.0',
+  version: '1.1.1',
   theme: 'auto',
   lang: 'zh_CN',
   defaultHot: 'kylive',
