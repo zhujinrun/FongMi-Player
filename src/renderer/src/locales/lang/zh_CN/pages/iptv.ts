@@ -11,6 +11,18 @@ export default {
     copyChannel: '复制频道',
     delChannel: '删除频道'
   },
+  probe: {
+    start: '检测',
+    stop: '停止',
+    stopping: '正在停止检测…',
+    alive: '可用',
+    onlyPlayable: '只显示可播放',
+    summary: '检测 {total} 个，{dead} 个不可用',
+    hintTurnOn: '检测完成，打开「只显示可播放」才会隐藏失效频道',
+    stopped: '已停止检测',
+    empty: '当前源没有可检测的频道',
+    fail: '检测失败'
+  },
   state: {
     noSourceTitle: '还没有可用的直播源',
     noSourceDesc: '添加一个直播源并设为默认后, 频道列表才会显示',

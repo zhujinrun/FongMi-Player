@@ -1,7 +1,12 @@
 <template>
   <div class="iptv view-container">
-    <common-nav :title="$t('pages.iptv.name')" :list="iptvConfig.data" :active="active.nav" search
-      @change-key="changeDefaultIptvEvent" />
+    <common-nav
+      :title="$t('pages.iptv.name')"
+      :list="iptvConfig.data"
+      :active="active.nav"
+      search
+      @change-key="changeDefaultIptvEvent"
+    />
     <div class="content">
       <!-- 配置读取失败原先会把 loading 和错误插槽一起关掉，页面全白且没有任何重试入口 -->
       <state-view
@@ -16,31 +21,63 @@
         <div class="header-nav">
           <TagNav :list="classConfig.data" :active="active.class" @change-key="changeClassEvent" />
         </div>
+        <!-- 检测与过滤必须挨在一起：这批源八成是转发地址，先测一遍才知道哪些能播 -->
+        <div class="header-tools">
+          <span v-if="probe.running" class="probe-progress">
+            {{ probe.done }}/{{ probe.total }} · {{ $t('pages.iptv.probe.alive') }} {{ probe.alive }}
+          </span>
+          <span v-else-if="probe.summary" class="probe-progress">{{ probe.summary }}</span>
+          <t-button
+            class="probe-btn"
+            size="small"
+            variant="outline"
+            @click="probe.running ? stopProbe() : probeAllEvent()"
+          >
+            {{ probe.running ? $t('pages.iptv.probe.stop') : $t('pages.iptv.probe.start') }}
+          </t-button>
+          <label class="probe-only">
+            <t-switch v-model="availableOnly" size="small" />
+            <span>{{ $t('pages.iptv.probe.onlyPlayable') }}</span>
+          </label>
+        </div>
       </header>
       <div v-if="!pageState" class="container">
-        <div class="content-wrapper" id="back-top">
-          <t-row :gutter="[16, 16]" style="margin: 0;">
+        <div id="back-top" class="content-wrapper">
+          <t-row :gutter="[16, 16]" style="margin: 0">
             <!-- 首屏/切分类时的占位：和影视页同一套骨架，只是封面比例不同 -->
             <skeleton-grid v-if="listSkeleton" :count="12" aspect="62%" />
             <template v-else>
-              <t-col :md="3" :lg="3" :xl="2" :xxl="1" v-for="item in displayList" :key="item.id"
-                :class="['card', { 'card-stale': listStale }]" @click="playEvent(item)"
-                @contextmenu="conButtonClick(item, $event)">
+              <t-col
+                v-for="item in displayList"
+                :key="item.id"
+                :md="3"
+                :lg="3"
+                :xl="2"
+                :xxl="1"
+                :class="['card', { 'card-stale': listStale }]"
+                @click="playEvent(item)"
+                @contextmenu="conButtonClick(item, $event)"
+              >
                 <div class="card-main">
                   <div v-show="iptvConfig.ext.status" class="card-tag">
                     <span v-if="item.status && item.status < 500" class="status-item success">{{ item.status }}ms</span>
-                    <span v-else class="status-item error">{{ item.status ? `${item.status}ms` : $t('pages.iptv.delay')
-                      }}</span>
+                    <span v-else class="status-item error">{{
+                      item.status ? `${item.status}ms` : $t('pages.iptv.delay')
+                    }}</span>
                   </div>
-                  <t-image class="card-main-item" :src="iptvConfig.ext.thumbnail ? item.thumbnail : generateLogo(item)"
+                  <t-image
+                    class="card-main-item"
+                    :src="iptvConfig.ext.thumbnail ? item.thumbnail : generateLogo(item)"
                     :style="{
                       width: '100%',
                       background: 'none',
                       overflow: 'hidden',
-                      padding: iptvConfig.ext.thumbnail
-                        ? 'none'
-                        : '35px 30px'
-                    }" :lazy="true" :loading="renderImageLoading" :error="renderImageError" />
+                      padding: iptvConfig.ext.thumbnail ? 'none' : '35px 30px',
+                    }"
+                    :lazy="true"
+                    :loading="renderImageLoading"
+                    :error="renderImageError"
+                  />
                 </div>
                 <div class="card-footer">
                   <span class="card-footer-title text-hide">{{ item.name }}</span>
@@ -48,22 +85,34 @@
               </t-col>
             </template>
 
-            <context-menu :show="isVisible.contentMenu" :options="optionsComponent"
-              @close="isVisible.contentMenu = false">
+            <context-menu
+              :show="isVisible.contentMenu"
+              :options="optionsComponent"
+              @close="isVisible.contentMenu = false"
+            >
               <context-menu-item :label="$t('pages.iptv.contextMenu.copyChannel')" @click="copyChannelEvent" />
               <context-menu-item :label="$t('pages.iptv.contextMenu.delChannel')" @click="delChannelEvent" />
             </context-menu>
           </t-row>
-          <infinite-loading v-if="isVisible.infiniteLoading" class="infinite-loading-container" :identifier="infiniteId"
-            :duration="200" @infinite="load">
+          <infinite-loading
+            v-if="isVisible.infiniteLoading"
+            class="infinite-loading-container"
+            :identifier="infiniteId"
+            :duration="200"
+            @infinite="load"
+          >
             <template #complete>{{ $t(`pages.iptv.infiniteLoading.${infiniteCompleteTip}`) }}</template>
             <template #error>{{ $t('pages.iptv.infiniteLoading.error') }}</template>
           </infinite-loading>
         </div>
       </div>
     </div>
-    <t-loading :attach="`.${prefix}-content`" size="medium" :text="$t('pages.setting.loading')"
-      :loading="isVisible.loading" />
+    <t-loading
+      :attach="`.${prefix}-content`"
+      size="medium"
+      :text="$t('pages.setting.loading')"
+      :loading="isVisible.loading"
+    />
     <t-back-top container="#back-top" size="small" :offset="['1.4rem', '0.5rem']" :duration="2000" />
   </div>
 </template>
@@ -89,10 +138,11 @@ import { t } from '@/locales';
 import { usePlayStore, useSettingStore } from '@/store';
 
 import { fetchIptvActive, clearChannel, addChannel, fetchChannelList, delChannelItem } from '@/api/iptv';
-import { setDefault } from '@/api/setting';
-import { parseChannel, checkChannel, stopCheckChannel } from '@/utils/channel';
+import { setDefault, updateSetting } from '@/api/setting';
+import { parseChannel, stopCheckChannel } from '@/utils/channel';
 import { renderImageError, renderImageLoading } from '@/utils/common/imageState';
 import emitter from '@/utils/emitter';
+import { getProbe, isDeadChannel, isProbeable, mergeProbeCache, probeChannels } from '@/utils/iptvProbe';
 import { checkUrlIpv6, copyToClipboardApi } from '@/utils/tool';
 
 import CommonNav from '../components/common-nav/index.vue';
@@ -107,7 +157,7 @@ const router = useRouter();
 const isVisible = reactive({
   infiniteLoading: false, // 筛选
   contentMenu: false,
-  loading: false
+  loading: false,
 });
 
 // 整页状态：'' 正常，noSource 没有可用直播源，error 配置请求失败
@@ -152,24 +202,25 @@ const iptvConfig = ref({
   default: {},
   data: [],
   ext: {
-    epg: "http://diyp.112114.xyz/",
-    logo: "https://epg.112114.eu.org/logo/",
+    epg: 'http://diyp.112114.xyz/',
+    logo: 'https://epg.112114.eu.org/logo/',
     skipIpv6: true,
     status: false,
-    thumbnail: false
+    thumbnail: false,
+    availableOnly: false,
   },
-  ua: ""
-})
+  ua: '',
+});
 
 const active = ref({
   nav: '',
-  class: '全部'
-})
+  class: '全部',
+});
 
 const channelData = ref<any>({
   list: [],
   total: 0,
-})
+});
 
 // 频道追加去重：原来用 _.unionWith(list, 新页, _.isEqual)，新页每个频道都要跟已累积的
 // 全部频道做深比较。频道表可以上万条，翻到后面单页要跑几十万次深比较。频道 id 是
@@ -177,7 +228,12 @@ const channelData = ref<any>({
 type ChannelItem = { id?: string | number };
 
 const appendUniqueChannel = (incoming: ChannelItem[], existing: ChannelItem[]): ChannelItem[] => {
-  const seen = new Set(existing.map((item) => item?.id).filter((id) => id !== undefined && id !== null).map(String));
+  const seen = new Set(
+    existing
+      .map((item) => item?.id)
+      .filter((id) => id !== undefined && id !== null)
+      .map(String),
+  );
   const fresh: ChannelItem[] = [];
   for (const item of incoming) {
     // 没有主键的条目一律保留：宁可重复一条，也不能把一堆空 id 折叠成同一个 key 全丢掉
@@ -201,7 +257,9 @@ const lastList = ref<ChannelCardItem[]>([]);
 const listPending = ref(false);
 let listWaitTimer: ReturnType<typeof setTimeout> | null = null;
 
-const displayList = computed(() => (listPending.value && lastList.value.length ? lastList.value : channelData.value.list));
+const displayList = computed(() =>
+  listPending.value && lastList.value.length ? lastList.value : channelData.value.list,
+);
 // 压暗的是上一批结果：不可点，避免点开已经不在当前分类里的频道
 const listStale = computed(() => listPending.value && lastList.value.length > 0 && channelData.value.list.length === 0);
 const listSkeleton = computed(() => listPending.value && displayList.value.length === 0);
@@ -254,8 +312,8 @@ watch(
 );
 
 const classConfig = ref({
-  data: [{ type_id: '全部', type_name: '全部' }]
-})
+  data: [{ type_id: '全部', type_name: '全部' }],
+});
 
 const mode = computed(() => {
   return storeSetting.displayMode;
@@ -290,15 +348,15 @@ onUnmounted(() => {
 const getSetting = async () => {
   try {
     const data = await fetchIptvActive();
-    if (has(data, 'default') && !isEmpty(data["default"])) {
-      iptvConfig.value.default = data["default"];
-      active.value.nav = data["default"]["id"];
+    if (has(data, 'default') && !isEmpty(data['default'])) {
+      iptvConfig.value.default = data['default'];
+      active.value.nav = data['default']['id'];
     }
-    if (has(data, 'ext') && !isEmpty(data["ext"])) {
-      iptvConfig.value.ext = data["ext"];
+    if (has(data, 'ext') && !isEmpty(data['ext'])) {
+      iptvConfig.value.ext = data['ext'];
     }
-    if (has(data, 'data') && !isEmpty(data["data"])) {
-      iptvConfig.value.data = data["data"];
+    if (has(data, 'data') && !isEmpty(data['data'])) {
+      iptvConfig.value.data = data['data'];
     }
 
     // 没有任何直播源时整页给空态，而不是留一个永远空着的列表
@@ -335,15 +393,20 @@ const getChannel = async () => {
     return 0;
   }
   pagination.value.count = res['total'];
-  classConfig.value.data = res["class"];
+  classConfig.value.data = res['class'];
 
   const sourceLength = res.data.length;
 
   if (skipIpv6) res.data = await checkChannelListIpv6(res.data);
+  // 过滤掉已明确判死的频道；没测过的一律照常显示，随后由 probePage 补测
+  const onlyPlayable = availableOnly.value;
+  const probeTargets = res.data;
+  if (onlyPlayable) res.data = res.data.filter((item) => !isDeadChannel(item.url));
   const restultLength = res.data.length;
   channelData.value.list = [...list, ...appendUniqueChannel(res.data, list)] as any;
 
-  if (status) checkChannelDelay(pageIndex, pageSize);
+  // 一个探测入口喂两个开关：可用性过滤 + 延迟数字
+  if (onlyPlayable || status) void probePage(probeTargets);
   if (thumbnail) generateThumbnail(pageIndex, pageSize);
 
   // 判断是否开启检查；判断原数据；判断原和目的
@@ -352,7 +415,7 @@ const getChannel = async () => {
   // 3. 非开启检查     1).直接返回原
   const length = sourceLength;
 
-  if (skipIpv6 && sourceLength && sourceLength !== restultLength) {
+  if ((skipIpv6 || onlyPlayable) && sourceLength && sourceLength !== restultLength) {
     if (res.data.length === 0) {
       pagination.value.pageIndex++;
       await getChannel();
@@ -364,10 +427,7 @@ const getChannel = async () => {
   return length;
 };
 
-const load = async (
-  $state: { complete: () => void; loaded: () => void; error: () => void },
-  explicit = false,
-) => {
+const load = async ($state: { complete: () => void; loaded: () => void; error: () => void }, explicit = false) => {
   infiniteState = $state;
   // 显式首屏请求在途时，观察者若因布局变化再次触发同一页就忽略
   if (!explicit && firstPageLoading && pagination.value.pageIndex <= 1) return;
@@ -429,13 +489,13 @@ const playEvent = (item) => {
     if (playerMode.type === 'custom') {
       window.electron.ipcRenderer.send('call-player', playerMode.external, item.url);
     } else {
-      const { epg, skipIpv6, logo } = iptvConfig.value.ext;
+      const { epg, skipIpv6, logo, availableOnly } = iptvConfig.value.ext;
       storePlayer.updateConfig({
         type: 'iptv',
         status: true,
         data: {
           info: item,
-          ext: { epg, skipIpv6, logo },
+          ext: { epg, skipIpv6, logo, availableOnly },
         },
       });
       window.electron.ipcRenderer.send('openPlayWindow', item.name);
@@ -474,32 +534,157 @@ const checkChannelListIpv6 = async (data) => {
   return filteredData;
 };
 
-// 检查状态
-const checkChannelDelay = async (pageIndex: number, pageSize: number) => {
-  console.log(`[channel] checkChannelDelay`);
-  const start = pageIndex * pageSize;
-  const end = (pageIndex + 1) * pageSize;
-  const dataList = slice(channelData.value.list, start, end); // 从原数组中截取需要处理的数据段
+// ===== 可用性检测 =====
+// 「延迟」开关走的是 checkChannel：GET 整条流、等结束再算耗时。这批源里八成是
+// live.ottiptv.cc 的 FLV 转发地址，流永远不结束，每条都要卡满 60s 超时才被判死，
+// 于是「检测」既慢又全错。这里换成读到首块即断（utils/iptvProbe），
+// 结论记在本机，列表据此过滤，频道表本身一条不动。
+const probe = reactive({ running: false, done: 0, total: 0, alive: 0, dead: 0, summary: '' });
+let probeStop = false;
 
-  const updateStatus = async (item) => {
-    try {
-      const result = await checkChannel(item.url);
-      return result;
-    } catch (error) {
-      return false;
+// 过滤条件变了必须重拉：已加载的列表是滤过的，不清空就被永久删掉了
+const reloadChannelList = async () => {
+  channelGen += 1;
+  pagination.value.pageIndex = 0;
+  channelData.value = { list: [], total: 0 };
+  infiniteCompleteTip.value = 'noMore';
+  isVisible.infiniteLoading = true;
+  infiniteId.value++;
+  await reloadList();
+};
+
+// 把已明确判死的频道就地摘掉；没测过的保留，交给后台补测
+const dropDeadChannels = () => {
+  const list = channelData.value.list;
+  if (!Array.isArray(list) || !list.length) return 0;
+  const kept = list.filter((item) => !isDeadChannel(item.url));
+  if (kept.length === list.length) return 0;
+  const removed = list.length - kept.length;
+  channelData.value.list = kept;
+  return removed;
+};
+
+// 探测只需要地址，其余字段用于回填延迟数字
+type ProbeTarget = { url?: string; status?: number | false };
+
+// 探测本页：既供「只显示可播放」过滤，也供「延迟」开关回填耗时。
+// 两者共用同一份缓存，避免同一批地址被请求两遍。
+const probePage = async (list: ProbeTarget[]) => {
+  const pending = (list || []).filter((item) => isProbeable(item?.url) && !getProbe(item.url));
+  const needStatus = !!iptvConfig.value.ext.status;
+  if (!pending.length) {
+    if (needStatus) applyProbeStatus(list);
+    return;
+  }
+  // 全量检测在跑时让它独占状态，这里只默默补测
+  const ownsProbe = !probe.running;
+  if (ownsProbe) {
+    probeStop = false;
+    probe.running = true;
+    probe.done = 0;
+    probe.total = pending.length;
+    probe.alive = 0;
+  }
+  try {
+    const result = await probeChannels(
+      pending.map((item) => item.url || ''),
+      {
+        concurrency: 8,
+        shouldStop: () => probeStop,
+        onProgress: (p) => {
+          if (!ownsProbe) return;
+          probe.done = p.done;
+          probe.total = p.total;
+          probe.alive = p.alive;
+        },
+      },
+    );
+    mergeProbeCache(result);
+    if (needStatus) applyProbeStatus(list);
+    if (availableOnly.value) {
+      const removed = dropDeadChannels();
+      console.log(`[iptv][probe][page] dropped ${removed}`);
     }
-  };
+  } finally {
+    if (ownsProbe) probe.running = false;
+  }
+};
 
-  // 将任务加入队列
-  const results = await Promise.all(dataList.map(item => queue.add(() => updateStatus(item))));
-
-  // 更新频道状态
-  results.forEach((result, i) => {
-    const index = start + i;
-    if (index < channelData.value.list.length) {
-      channelData.value.list[index].status = result;
-    }
+// 「延迟」标签改用探测结果：旧实现会把无限流一直等到 60s 超时
+const applyProbeStatus = (list: ProbeTarget[]) => {
+  (list || []).forEach((item) => {
+    const hit = getProbe(item?.url);
+    if (hit) item.status = hit.ok ? Math.max(1, Math.round(hit.ms)) : false;
   });
+};
+
+const availableOnly = computed({
+  get: () => !!iptvConfig.value.ext.availableOnly,
+  set: (val: boolean) => {
+    iptvConfig.value.ext.availableOnly = val;
+    updateSetting({ iptvAvailableOnly: val }).catch((err) => console.error('[iptv][availableOnly][save]', err));
+    if (!val) {
+      // 关掉后要把先前滤掉的频道找回来，否则列表会一直少一截
+      void reloadChannelList();
+      return;
+    }
+    dropDeadChannels();
+    void probePage(channelData.value.list);
+  },
+});
+
+const stopProbe = () => {
+  if (!probe.running) return;
+  probeStop = true;
+  MessagePlugin.info(t('pages.iptv.probe.stopping'));
+};
+
+// 检测完按新结果重拉第一页，否则当前列表还是过滤前的
+const refreshAfterProbe = async () => {
+  if (!availableOnly.value) {
+    MessagePlugin.success(t('pages.iptv.probe.hintTurnOn'));
+    return;
+  }
+  await reloadChannelList();
+};
+
+const probeAllEvent = async () => {
+  if (probe.running) return;
+  probe.running = true;
+  probeStop = false;
+  probe.summary = '';
+  probe.done = 0;
+  probe.total = 0;
+  probe.alive = 0;
+  probe.dead = 0;
+  try {
+    // 全量只拉一次：分页拉会让同一批地址被反复去重，反而更慢
+    const res = await fetchChannelList(0, 100000, null, null);
+    const urls = (res?.data || []).map((item) => item.url);
+    if (!urls.length) {
+      probe.summary = t('pages.iptv.probe.empty');
+      return;
+    }
+    const result = await probeChannels(urls, {
+      concurrency: 8,
+      shouldStop: () => probeStop,
+      onProgress: (p) => {
+        probe.done = p.done;
+        probe.total = p.total;
+        probe.alive = p.alive;
+        probe.dead = p.dead;
+      },
+    });
+    mergeProbeCache(result);
+    probe.summary = t('pages.iptv.probe.summary', { dead: probe.dead, total: probe.done });
+    if (probeStop) MessagePlugin.info(t('pages.iptv.probe.stopped'));
+    await refreshAfterProbe();
+  } catch (err) {
+    console.error('[iptv][probe][error]', err);
+    MessagePlugin.error(t('pages.iptv.probe.fail'));
+  } finally {
+    probe.running = false;
+  }
 };
 
 // 缩略图
@@ -510,22 +695,22 @@ const generateThumbnail = async (pageIndex: number, pageSize: number) => {
   const dataList = slice(channelData.value.list, start, end); // 从原数组中截取需要处理的数据段
 
   const updateThumbnail = async (item) => {
-    window.electron.ipcRenderer.invoke('ffmpeg-thumbnail', item.url, item.id).then(res => {
+    window.electron.ipcRenderer.invoke('ffmpeg-thumbnail', item.url, item.id).then((res) => {
       if (res) {
         const index = findIndex(channelData.value.list, { id: res.key });
-        channelData.value.list[index]["thumbnail"] = res.url;
+        channelData.value.list[index]['thumbnail'] = res.url;
       }
     });
   };
 
   for (let i = 0; i < dataList.length; i++) {
     const item = dataList[i];
-    // eslint-disable-next-line no-await-in-loop
+
     queue.add(() => {
       updateThumbnail(item);
     });
   }
-}
+};
 
 // 清空队列，并终止请求
 const clearQueue = () => {
@@ -556,6 +741,10 @@ const changeDefaultIptvEvent = async (id: string) => {
     active.value.nav = id;
     active.value.class = '全部';
     classConfig.value.data = [{ type_id: '全部', type_name: '全部' }];
+    // 换了源，上一次的体检结论不再属于这份频道表
+    probe.summary = '';
+    probe.done = 0;
+    probe.total = 0;
     beginListWait();
     channelGen++;
     channelData.value = { list: [], total: 0 };
@@ -638,9 +827,9 @@ const generateLogo = (item) => {
   let url = item.logo;
   if (iptvConfig.value.ext.logo) {
     url = `${iptvConfig.value.ext.logo}${item.name}.png`;
-  };
+  }
   return url;
-}
+};
 </script>
 
 <style lang="less" scoped>
@@ -659,7 +848,7 @@ const generateLogo = (item) => {
     height: 40px;
     width: 148px;
     border: 2px solid rgba(132, 133, 141, 0.16);
-    transition: all .3s ease;
+    transition: all 0.3s ease;
     font-size: 14px;
     border-radius: 5px;
     cursor: pointer;
@@ -694,10 +883,39 @@ const generateLogo = (item) => {
       white-space: nowrap;
       flex-shrink: 0;
       width: 100%;
+      gap: 12px;
 
       .header-nav {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         overflow: hidden;
+      }
+
+      .header-tools {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+
+        .probe-progress {
+          font-size: 12px;
+          opacity: 0.6;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .probe-btn {
+          flex-shrink: 0;
+        }
+
+        .probe-only {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          user-select: none;
+          opacity: 0.85;
+        }
       }
     }
 

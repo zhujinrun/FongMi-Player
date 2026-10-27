@@ -11,6 +11,18 @@ export default {
     copyChannel: 'Copy Channel',
     delChannel: 'Delete Channel'
   },
+  probe: {
+    start: 'Check',
+    stop: 'Stop',
+    stopping: 'Stopping...',
+    alive: 'playable',
+    onlyPlayable: 'Playable only',
+    summary: 'Checked {total}, {dead} unavailable',
+    hintTurnOn: 'Done. Turn on "Playable only" to hide the unavailable channels',
+    stopped: 'Check stopped',
+    empty: 'No channel to check in the current source',
+    fail: 'Check failed'
+  },
   state: {
     noSourceTitle: 'No live source yet',
     noSourceDesc: 'Add a live source and set it as default, then channels will show up here',

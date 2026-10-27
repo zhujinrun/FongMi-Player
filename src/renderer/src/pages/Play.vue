@@ -478,6 +478,7 @@ import InfiniteLoading from 'v3-infinite-loading';
 import { computed, onBeforeUnmount, onMounted, ref, reactive, shallowRef, watch } from 'vue';
 
 import { fetchChannelList } from '@/api/iptv';
+import { isDeadChannel } from '@/utils/iptvProbe';
 import { checkUrlIpv6, getLocalStorage } from '@/utils/tool';
 import { playerBarrage, playerCreate, playerDestroy, playerNext, playerSeek, playerPause, playerToggle, playerCurrentTime, playerDuration, playerVolume, playerMuted, playerPlaybackRate, PLAYBACK_RATES, playerTimeUpdate, offPlayerTimeUpdate, offPlayerBarrage, playerOnError, offPlayerError, setStreamErrorNotify } from '@/utils/common/player';
 import {
@@ -1848,7 +1849,11 @@ const checkChannelListIpv6 = async (data: any[]) => {
 // 获取直播列表
 const getChannelList = async () => {
   const { pageIndex, pageSize } = pagination.value;
-  const { skipIpv6 } = data.value.ext;
+  // ext 是跨窗口传过来的普通对象，这里只关心两个过滤开关
+  const { skipIpv6, availableOnly } = (data.value.ext || {}) as {
+    skipIpv6?: boolean;
+    availableOnly?: boolean;
+  };
   const { channelData } = iptvConfig.value;
 
   const res = await fetchChannelList(pageIndex, pageSize);
@@ -1857,11 +1862,13 @@ const getChannelList = async () => {
   const sourceLength = res.data.length;
 
   if (skipIpv6) res.data = await checkChannelListIpv6(res.data);
+  // 电视页已经判死的频道不该再出现在侧栏，否则点开还是同一块黑屏
+  if (availableOnly) res.data = res.data.filter((item) => !isDeadChannel(item.url));
   const restultLength = res.data.length;
   iptvConfig.value.channelData = unionWith(channelData, res.data, isEqual);
   const length = sourceLength;
 
-  if (skipIpv6 && sourceLength && sourceLength !== restultLength) {
+  if ((skipIpv6 || availableOnly) && sourceLength && sourceLength !== restultLength) {
     if (res.data.length === 0) {
       pagination.value.pageIndex++;
       await getChannelList();

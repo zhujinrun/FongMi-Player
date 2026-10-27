@@ -18,6 +18,7 @@
   { "key": "iptvSkipIpv6", "value": true },
   { "key": "iptvThumbnail", "value": false },
   { "key": "iptvStatus", "value": false },
+  { "key": "iptvAvailableOnly", "value": false },
   { "key": "defaultSite", "value": null },
   { "key": "defaultIptv", "value": null },
   { "key": "defaultAnalyze", "value": null },

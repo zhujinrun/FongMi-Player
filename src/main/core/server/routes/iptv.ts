@@ -112,6 +112,7 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
       const skipIpv6 = await setting.find({ key: 'iptvSkipIpv6' }).value;
       const status = await setting.find({ key: 'iptvStatus' }).value;
       const thumbnail = await setting.find({ key: 'iptvThumbnail' }).value;
+      const availableOnly = await setting.find({ key: 'iptvAvailableOnly' }).value;
       const res = {
         data,
         default: tacitly,
@@ -121,6 +122,8 @@ const api: FastifyPluginAsync = async (fastify): Promise<void> => {
           skipIpv6,
           status,
           thumbnail,
+          // 只显示可播放：结论由渲染进程探测后存在本机，这里只管开关本身
+          availableOnly: !!availableOnly,
         },
       };
       reply.code(200).send(res);
