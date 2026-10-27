@@ -144,6 +144,36 @@ const checkMediaType = async (url: string): Promise<string> => {
   }
 };
 
+/**
+ * 读首个数据块嗅探真实容器。
+ * HEAD 在直播源上普遍不可信：ottiptv 那类 FLV 转发地址对 HEAD 直接回 404，
+ * 拿到 content-type: text/plain，类型判定就会落到 unknown → 误用 HLS 内核。
+ * 这里改为 GET 后只读第一块就 abort，不会把整条直播流拉下来。
+ */
+const sniffMediaType = async (url: string, timeout = 6000): Promise<string> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.body) return 'unknown';
+    const reader = response.body.getReader();
+    const chunk = (await reader.read()).value;
+    controller.abort();
+    if (!chunk || !chunk.length) return 'unknown';
+    // FLV 魔数 "FLV"，比文本判断更可靠
+    if (chunk[0] === 0x46 && chunk[1] === 0x4c && chunk[2] === 0x56) return 'flv';
+    const head = new TextDecoder('utf-8').decode(chunk.slice(0, 512));
+    if (head.includes('#EXTM3U') || head.includes('#EXTINF')) return 'm3u8';
+    if (head.includes('ftyp')) return 'mp4';
+    if (head.startsWith('ID3')) return 'mp3';
+    return 'unknown';
+  } catch (_err) {
+    return 'unknown';
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const getMeadiaType = async (url: string): Promise<string> => {
   let mediaType: string = 'unknown';
   try {
@@ -177,12 +207,14 @@ const getMeadiaType = async (url: string): Promise<string> => {
           mediaType = supportedFormats[format];
         }
       }
+      // 200 但 content-type 不认识（常见 text/plain、application/json）也要嗅探
+      if (mediaType === 'unknown') mediaType = await sniffMediaType(url);
     } else {
-      mediaType = 'error';
+      mediaType = await sniffMediaType(url);
     }
   } catch (err) {
-    mediaType = 'error';
-    throw err;
+    mediaType = await sniffMediaType(url);
+    console.log('[tool][getMeadiaType][head-failed]', err);
   } finally {
     console.log(`媒体播放类型：${mediaType}`);
     return mediaType;
@@ -200,11 +232,21 @@ const checkUrlIpv6 = async (url: string) => {
   }
 };
 
-const checkLiveM3U8 = async (url: string): Promise<boolean> => {
+/**
+ * 判断直播源是不是「直播」（决定播放器要不要显示进度条）。
+ * mediaType 已知时先短路：FLV 是无限流，原先无条件 GET 整包会一直下载到
+ * 60s 超时才 reject，点一个台要白等一分钟。
+ */
+const checkLiveM3U8 = async (url: string, mediaType: string = ''): Promise<boolean> => {
+  if (mediaType === 'flv') return true;
+  // 已知不是 HLS 的直接按点播处理，不值得为进度条去拉整包
+  if (mediaType && mediaType !== 'm3u8' && mediaType !== 'unknown') return false;
+
   try {
     const response = await request({
       url,
       method: 'GET',
+      timeout: 8000,
     });
 
     const isLiveStream = !(

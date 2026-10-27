@@ -168,8 +168,10 @@ const playerCreate = async (
   const playerModule = await loadPlayerMethod(playerMode);
   const { create, options } = playerModule;
 
-  const isLive = type === 'iptv' ? await checkLiveM3U8(url) : false;
+  // 先定类型再判直播：checkLiveM3U8 需要 mediaType 才能对 FLV 这类无限流短路，
+  // 否则会为了判断进度条把整条直播流拉下来（旧顺序正是先 GET 后定类型，点台必卡）
   videoType = videoType || (await checkMediaType(url)) || '';
+  const isLive = type === 'iptv' ? await checkLiveM3U8(url, videoType) : false;
 
   let config = cloneDeep(options);
   if (playerMode === 'xgplayer') {
