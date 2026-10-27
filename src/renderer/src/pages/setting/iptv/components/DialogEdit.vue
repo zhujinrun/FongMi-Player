@@ -12,6 +12,7 @@
               <t-radio-group v-model="formData.type">
                 <t-radio value="remote">{{ $t('pages.setting.table.iptv.remote') }}</t-radio>
                 <t-radio value="local">{{ $t('pages.setting.table.iptv.local') }}</t-radio>
+                <t-radio value="tvbox">{{ $t('pages.setting.table.iptv.tvbox') }}</t-radio>
                 <t-radio value="batches">{{ $t('pages.setting.table.iptv.manual') }}</t-radio>
               </t-radio-group>
             </t-space>

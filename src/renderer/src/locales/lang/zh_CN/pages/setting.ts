@@ -63,6 +63,7 @@ export default {
     iptv: {
       remote: '远程',
       local: '本地',
+      tvbox: '电视源配置',
       manual: '手动',
     },
     analyze: {

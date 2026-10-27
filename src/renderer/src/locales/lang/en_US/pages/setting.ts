@@ -63,6 +63,7 @@ export default {
     iptv: {
       remote: 'Remote',
       local: 'Local',
+      tvbox: 'TVBox',
       manual: 'Manual',
     },
     analyze: {

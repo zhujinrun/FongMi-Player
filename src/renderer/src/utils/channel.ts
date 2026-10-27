@@ -50,47 +50,153 @@ const txt = (text: string) => {
   return docs;
 };
 
-const parseChannel = async (type: 'local' | 'remote' | 'url', path: string) => {
+type SourceType = 'local' | 'remote' | 'batches' | 'tvbox';
+
+/** 一个列表文本，按首行嗅探格式：TVBox 的 lives.type 不可靠（饭太硬全标 0 实际是 m3u） */
+const parseList = (text: string) => {
+  const body = String(text ?? '').trim();
+  if (!body) return [];
+  return body.startsWith('#EXTM3U') ? m3u(body) : txt(body);
+};
+
+/** 走主进程拉原始字节：渲染进程改不了 User-Agent，而且部分源站只有 IPv4 能通 */
+const fetchBinary = async (url: string, ua = ''): Promise<Uint8Array> => {
+  const res = await window.electron.ipcRenderer.invoke('iptv-fetch', url, ua);
+  if (!res || !res.status) throw new Error(`fetch failed: ${url}`);
+  if (res.status >= 400) throw new Error(`HTTP ${res.status}: ${url}`);
+  const binary = atob(res.body);
+  return Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+};
+
+const fetchText = async (url: string, ua?: string) => new TextDecoder('utf-8').decode(await fetchBinary(url, ua || ''));
+
+/**
+ * TVBox 配置正文有两种形态：纯 JSON，或「JPEG 占位图 + FFD9 之后的 base64」（饭太硬
+ * 的 /tv 就是这样，浏览器看到的是一张图）。配置里还常带 // 注释掉的条目，标准 JSON
+ * 解析器会在这里失败，TVBox 自己用 fastjson 所以容忍。
+ */
+const tvboxConfigFromText = (raw: string) => {
+  const tryJson = (s: string) => {
+    const start = s.indexOf('{');
+    if (start < 0) return null;
+    const body = s
+      .slice(start)
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .join('\n');
+    try {
+      const parsed = JSON.parse(body);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = tryJson(raw);
+  if (direct) return direct;
+
+  // JPEG 与 base64 之间可能夹着分隔符（饭太硬是两个 *），atob 遇到就抛，所以要清洗而不是校验
+  const compact = raw.replace(/[^A-Za-z0-9+/=]/g, '');
+  if (compact.length < 16) return null;
+  const padded = compact + '='.repeat((4 - (compact.length % 4)) % 4);
   try {
-    let fileContent;
-    if (type === 'local') {
-      await window.electron.ipcRenderer.invoke('read-file', path).then((res) => {
-        fileContent = res;
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+    return tryJson(new TextDecoder('utf-8').decode(bytes));
+  } catch {
+    return null;
+  }
+};
+
+const tvboxConfigFromBuffer = (bytes: Uint8Array) => {
+  // 从尾部找最后一个 FFD9，它后面就是 base64 配置
+  let imageEnd = -1;
+  for (let i = bytes.length - 2; i >= 0; i -= 1) {
+    if (bytes[i] === 0xff && bytes[i + 1] === 0xd9) {
+      imageEnd = i + 2;
+      break;
+    }
+  }
+  if (imageEnd > 0 && imageEnd < bytes.length) {
+    const tail = new TextDecoder('ascii').decode(bytes.subarray(imageEnd)).trim();
+    const fromTail = tail ? tvboxConfigFromText(tail) : null;
+    if (fromTail) return fromTail;
+  }
+  return tvboxConfigFromText(new TextDecoder('utf-8').decode(bytes));
+};
+
+/** TVBox 配置 → 内嵌 lives 逐条拉取，替代「把整个配置当频道列表解析」得到 0 条 */
+const tvboxChannels = async (path: string) => {
+  const config = tvboxConfigFromBuffer(await fetchBinary(path));
+  const lives = Array.isArray(config?.lives) ? config.lives : [];
+  if (lives.length === 0) throw new Error('not a tvbox config: no lives');
+
+  const docs: any[] = [];
+  for (const live of lives) {
+    const url = String(live?.url ?? '').trim();
+    if (!url) continue;
+    // type 3 是订阅（还要再解一层，且多半带有效期），127.0.0.1 是 TVBox 自己的本地代理
+    if (Number(live?.type) === 3) continue;
+    if (/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(url)) continue;
+    try {
+      const list = parseList(await fetchText(url, live?.ua));
+      // 没写分组的补上源名，否则界面上全落进「未分组」
+      list.forEach((doc) => {
+        if (!doc.group) doc.group = live?.name;
       });
-    } else if (type === 'remote') {
-      const response = await request({
-        url: path,
-        method: 'GET',
-      });
-      fileContent = response;
+      docs.push(...list);
+    } catch (err) {
+      console.warn(`[iptv][tvbox] live 跳过 ${live?.name}: ${err}`);
+    }
+  }
+  // 同一批 m3u 常被多个 live 引用，按 名字+地址 去重
+  const seen = new Set<string>();
+  const unique = docs.filter((doc) => {
+    const key = `${doc.name}|${doc.url}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  // 配置能读到但一条频道都取不到（订阅过期 / 全部不可达）时明确报错，别让用户以为加成功了
+  if (unique.length === 0) throw new Error('tvbox config has no usable live source');
+  return unique;
+};
+
+const parseChannel = async (type: SourceType, path: string) => {
+  try {
+    let channelContent: any[] = [];
+    if (type === 'tvbox') {
+      channelContent = await tvboxChannels(path);
     } else {
-      fileContent = path;
-    }
-    if (fileContent) {
-      fileContent = fileContent.trim();
-      let channelContent;
-
-      if (fileContent.startsWith('#EXTM3U')) {
-        channelContent = m3u(fileContent);
+      let fileContent;
+      if (type === 'local') {
+        await window.electron.ipcRenderer.invoke('read-file', path).then((res) => {
+          fileContent = res;
+        });
+      } else if (type === 'remote') {
+        fileContent = await request({
+          url: path,
+          method: 'GET',
+        });
       } else {
-        channelContent = txt(fileContent);
+        fileContent = path;
       }
-
-      for (let i = 0; i < channelContent.length; i++) {
-        const dataItem = channelContent[i];
-        if (has(dataItem, 'id')) {
-          // 使用 isString() 检查 dataItem.id 是否为字符串类型
-          if (!isString(dataItem.id)) {
-            channelContent[i].id = `${channelContent[i].id.id}`;
-          }
-        } else {
-          channelContent[i].id = nanoid();
-        }
-      }
-
-      return channelContent;
+      if (fileContent) channelContent = parseList(String(fileContent));
     }
-    return [];
+
+    for (let i = 0; i < channelContent.length; i++) {
+      const dataItem = channelContent[i];
+      if (has(dataItem, 'id')) {
+        // 使用 isString() 检查 dataItem.id 是否为字符串类型
+        if (!isString(dataItem.id)) {
+          channelContent[i].id = `${channelContent[i].id.id}`;
+        }
+      } else {
+        channelContent[i].id = nanoid();
+      }
+    }
+
+    return channelContent;
   } catch (err) {
     throw err;
   }

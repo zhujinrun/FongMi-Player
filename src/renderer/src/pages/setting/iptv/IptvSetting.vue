@@ -65,6 +65,9 @@
         <t-tag v-else-if="row.type === 'local'" theme="warning" shape="round" variant="light-outline">{{
           $t('pages.setting.table.iptv.local')
         }}</t-tag>
+        <t-tag v-else-if="row.type === 'tvbox'" theme="primary" shape="round" variant="light-outline">{{
+          $t('pages.setting.table.iptv.tvbox')
+        }}</t-tag>
         <t-tag v-else-if="row.type === 'batches'" theme="danger" shape="round" variant="light-outline">{{
           $t('pages.setting.table.iptv.manual')
         }}</t-tag>

@@ -2,6 +2,8 @@ import { electronApp, is, platform } from '@electron-toolkit/utils';
 import { exec, execFile } from 'child_process';
 import { app, BrowserWindow, globalShortcut, ipcMain, nativeTheme, shell } from 'electron';
 import fs from 'fs-extra';
+import { get as httpGet, RequestOptions } from 'http';
+import { get as httpsGet } from 'https';
 import { join, resolve, relative, isAbsolute } from 'path';
 
 import logger from './logger';
@@ -24,6 +26,49 @@ const tmpDir = async (path: string) => {
     logger.error(err);
   }
 };
+
+/**
+ * 主进程侧的轻量 HTTP GET：强制 IPv4 并按需带 UA，返回原始字节。
+ * 只给直播源拉取用，跟随最多 3 次重定向。
+ */
+const fetchRemote = (url: string, ua = '', redirects = 3): Promise<{ status: number; body: Buffer }> =>
+  new Promise((resolve, reject) => {
+    let target: URL;
+    try {
+      target = new URL(url);
+    } catch {
+      reject(new Error(`bad url: ${url}`));
+      return;
+    }
+    if (!/^https?:$/.test(target.protocol)) {
+      reject(new Error(`unsupported protocol: ${target.protocol}`));
+      return;
+    }
+    const options: RequestOptions = {
+      family: 4,
+      timeout: 20000,
+      headers: {
+        'User-Agent': ua || 'okhttp/3.12.0',
+        Accept: '*/*',
+      },
+    };
+    const getter = target.protocol === 'https:' ? httpsGet : httpGet;
+    const req = getter(target, options, (res) => {
+      const status = res.statusCode ?? 0;
+      const location = res.headers.location;
+      if (status >= 300 && status < 400 && location && redirects > 0) {
+        res.resume();
+        resolve(fetchRemote(new URL(location, target).toString(), ua, redirects - 1));
+        return;
+      }
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk) => chunks.push(chunk as Buffer));
+      res.on('end', () => resolve({ status, body: Buffer.concat(chunks) }));
+      res.on('error', reject);
+    });
+    req.on('timeout', () => req.destroy(new Error(`timeout: ${url}`)));
+    req.on('error', reject);
+  });
 
 const ipcListen = () => {
   ipcMain.on('uninstallShortcut', () => {
@@ -143,6 +188,16 @@ const ipcListen = () => {
     logger.info(res);
 
     return res;
+  });
+
+  /**
+   * 直播源拉取放在主进程：渲染进程的 XHR 改不了 User-Agent（forbidden header），而 TVBox
+   * 源常按 UA 决定返回配置还是网页（饭太硬只有 okhttp 才给配置）；另外部分源站只有 IPv4，
+   * 默认的 Happy Eyeballs 会先卡在 IPv6 上超时（肥猫就是这样）。返回 base64 以保住二进制。
+   */
+  ipcMain.handle('iptv-fetch', async (_, url, ua) => {
+    const { status, body } = await fetchRemote(String(url), ua ? String(ua) : '');
+    return { status, body: body.toString('base64') };
   });
 
   ipcMain.on('open-url', async (_, url) => {
