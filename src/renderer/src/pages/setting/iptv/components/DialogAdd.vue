@@ -2,7 +2,7 @@
   <t-dialog v-model:visible="formVisible" :header="$t('pages.setting.dialog.add')" :width="650" placement="center"
     :footer="false">
     <template #body>
-      <t-form :data="formData" :rules="rules" :label-width="60" @submit="onSubmit">
+      <t-form ref="formRef" :data="formData" :rules="rules" :label-width="60" @submit="onSubmit">
         <t-form-item :label="$t('pages.setting.iptv.name')" name="name">
           <t-input v-model="formData.name" class="input-item" :placeholder="$t('pages.setting.placeholder.general')" />
         </t-form-item>
@@ -20,7 +20,7 @@
               <t-input v-if="formData.type !== 'batches'" v-model="formData.url" class="input-item"
                 :class="formData.type === 'local' ? 'input-item-split' : ''"
                 :placeholder="$t('pages.setting.placeholder.general')" />
-              <t-upload v-if="formData.type === 'local'" class="upload-item" theme="file"
+              <t-upload v-if="formData.type === 'local'" v-model="file" class="upload-item" theme="file"
                 accept="audio/mpegurl;text/plain" auto-upload :max="1" :allow-upload-duplicate-file="true"
                 :show-upload-progress="false" :request-method="requestMethod">
                 <t-button theme="primary" style="width: 110px;">
@@ -64,14 +64,25 @@ const props = defineProps({
   },
 });
 const formVisible = ref(false);
-const formData = reactive({
+const formRef = ref();
+const file = ref([]);
+// 每次打开弹框都要回到初始状态：组件是常驻的（v-model 只切显隐），
+// 不重置的话上次输入的名称/地址/类型/校验红框都会残留
+const createForm = () => ({
   name: '',
   url: '',
   epg: '',
   type: 'remote',
-  isActive: true
+  isActive: true,
 });
+const formData = reactive(createForm());
 const emit = defineEmits(['update:visible', 'addTableData']);
+
+const resetForm = () => {
+  Object.assign(formData, createForm());
+  file.value = [];
+  formRef.value?.clearValidate();
+};
 
 watch(
   () => formVisible.value,
@@ -82,6 +93,7 @@ watch(
 watch(
   () => props.visible,
   (val) => {
+    if (val) resetForm();
     formVisible.value = val;
   },
 );

@@ -87,7 +87,11 @@
     </t-table>
 
     <dialog-add-view v-model:visible="isVisible.dialogAdd" @add-table-data="tableAdd" />
-    <dialog-edit-view v-model:visible="isVisible.dialogEdit" :data="formData" />
+    <dialog-edit-view
+      v-model:visible="isVisible.dialogEdit"
+      :data="formData"
+      @refresh-table-data="refreshTable"
+    />
   </div>
 </template>
 

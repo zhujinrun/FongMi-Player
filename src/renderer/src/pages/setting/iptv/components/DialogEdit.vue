@@ -2,7 +2,7 @@
   <t-dialog v-model:visible="formVisible" :header="$t('pages.setting.dialog.edit')" :width="650" placement="center"
     :footer="false">
     <template #body>
-      <t-form :data="formData" :rules="rules" :label-width="60" @submit="onSubmit">
+      <t-form ref="formRef" :data="formData" :rules="rules" :label-width="60" @submit="onSubmit">
         <t-form-item :label="$t('pages.setting.iptv.name')" name="name">
           <t-input v-model="formData.name" :placeholder="$t('pages.setting.placeholder.general')" />
         </t-form-item>
@@ -71,8 +71,16 @@ const props = defineProps({
 });
 const file = ref([]);
 const formVisible = ref(false);
-const formData = ref(props.data);
+const formRef = ref();
+// 拷贝一份再编辑：若直接持有表格行对象，「取消」也会把改动留在列表里
+const formData = ref<any>({ ...props.data });
 const emit = defineEmits(['update:visible', 'refreshTableData']);
+
+const syncForm = () => {
+  formData.value = { ...props.data };
+  file.value = [];
+  formRef.value?.clearValidate();
+};
 
 watch(
   () => formVisible.value,
@@ -83,13 +91,14 @@ watch(
 watch(
   () => props.visible,
   (val) => {
+    if (val) syncForm();
     formVisible.value = val;
   },
 );
 watch(
   () => props.data,
-  (val) => {
-    formData.value = val;
+  () => {
+    if (props.visible) syncForm();
   },
 );
 
