@@ -85,7 +85,7 @@ FmPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它
 
 ### 安装包说明
 
-- **MacOS**: 提供 arm64、x64 及 universal 三种架构安装包。
+- **MacOS**: 提供 arm64、x64 及 universal 三种架构安装包。安装包未做 Apple 开发者签名与公证（见下方「macOS 安装问题解决方案」），且运行前需自备 JRE/JDK 11 以上——网关（`gateway.jar`）依赖 Java，缺失时源解析不可用。
 - **Windows**: 支持 arm64、x64、ia32，以及通用版本，但请注意 Electron 23 起不再支持 Win 7/8/8.1。
 - **Linux**: 针对 arm64、x64 架构发行 image、deb、rpm 安装包。
 
@@ -95,9 +95,22 @@ FmPlayer是一款采用现代化技术栈开发的高颜值媒体播放器，它
 
 > **最新开发版下载**: 访问 [GitHub Actions页面](https://github.com/zhujinrun/FongMi-Player/actions) 获取。
 
+### macOS 依赖：需要先装 Java
+
+网关是一个 Java 服务，macOS 不再自带 JRE，请任选一种方式安装 JRE/JDK（11 以上，推荐 21）：
+
+```bash
+brew install --cask temurin
+```
+
+或从 [Adoptium](https://adoptium.net/temurin/releases/) 下载 `.pkg` 安装包。安装后应用会在以下位置自动寻找 Java：
+`/usr/libexec/java_home`、`/Library/Java/JavaVirtualMachines`、Homebrew（`/opt/homebrew/opt/openjdk*`）、SDKMAN。
+
+若装在非标准路径，在「设置 → 网关 → Java Home」里填 JDK 根目录（形如 `/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`）。
+
 ### macOS 安装问题解决方案
 
-若遇到“已损坏”提示，执行以下命令修复权限
+安装包未做签名与公证，首次打开可能被 Gatekeeper 拦下。请按提示在「系统设置 → 隐私与安全性」中点「仍要打开」，或执行以下命令修复权限
 
 ```bash
 sudo xattr -cr /Applications/fmplayer.app
