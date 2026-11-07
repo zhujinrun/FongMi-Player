@@ -2,6 +2,28 @@
 
 本文件记录 FmPlayer 各版本面向用户的变更。更早版本（v1.1.1 及以前）的说明见 [GitHub Releases](https://github.com/zhujinrun/FongMi-Player/releases)。
 
+## v1.3.5-fea.1 (2026-11-07)
+
+自 v1.3.4 起共 5 次提交，是一个 **macOS 预览版**：Windows / Linux 的功能与 v1.3.4 没有差别，新东西只有一个——终于有 macOS 安装包了。
+
+### 新增
+
+- macOS 安装包：提供 arm64、x64、universal 三种 dmg。此前 Releases 里只有 Windows 与 Linux 产物，README 却一直写着提供 Mac 安装包——根因是打包流水线的构建矩阵里 macOS 那一行从项目导入起就是注释状态，从来没跑过。
+- macOS 上自动寻找 JDK：先问 `/usr/libexec/java_home`，再扫 `/Library/Java/JavaVirtualMachines`（.pkg 安装位置）、Homebrew（`/opt/homebrew`、`/usr/local`）与 SDKMAN。Finder 启动的 app 只有一条最小 PATH，以前完全找不到 brew 装的 Java。
+
+### 修复
+
+- macOS / Linux 上缺 Java 时网关静默失败：以前只有 Windows 会明确报「java.exe not found」，其他平台拿着一个裸 `java` 去启动，进程直接退出，界面只显示「源无数据」，看起来像网络问题。现在三端都会给出明确提示，macOS 的提示里直接写了安装命令与 Java Home 填法。
+- macOS 的 `/usr/bin/java` 是个 stub：没装 JDK 时它也存在，执行只会弹安装提示。探测时会把跑不通 `-version` 的候选排除掉，不再选中这个空壳。
+- 打包流水线在 macOS 上的内存上限：arm64 runner 只有 7GB 内存，V8 据此把 heap 限制在约 2GB，渲染进程打包直接 OOM。现已显式提到 4GB。
+
+### 升级提示
+
+- Windows / Linux 用户不必为这个预览版升级，等正式版即可。
+- macOS 用户需自备 JRE/JDK 11 以上，推荐 `brew install --cask temurin`；装在非标准路径时在「设置 → 网关 → Java Home」里填 JDK 根目录。
+- 安装包未做 Apple 签名与公证，首次打开若提示「已损坏」或被 Gatekeeper 拦下：执行 `sudo xattr -cr /Applications/fmplayer.app`，或在「系统设置 → 隐私与安全性」里点「仍要打开」。
+- macOS 自动更新暂不可用（未签名，且只产出 dmg、没有 zip 与 `latest-mac.yml`），升级需手动下载新的 dmg。
+
 ## v1.3.4 (2026-10-27)
 
 自 v1.3.3 起共 3 次提交，全部是内嵌网关（`gateway.jar`）的更新，界面无改动。两件事：**加固壳源的域名现在跟着源站自己走**，以及**饭太硬配置里的 `.js`（drpy）源能用了**。
