@@ -1,5 +1,5 @@
 import { app } from 'electron';
-import { spawn, ChildProcess, execFile, exec } from 'child_process';
+import { spawn, ChildProcess, execFile, exec, execFileSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs-extra';
 import fetch from 'node-fetch';
@@ -196,6 +196,9 @@ function findJavaOnPath(): string {
   for (const dir of pathEnv.split(delimiter)) {
     if (!dir) continue;
     try {
+      // macOS 的 /usr/bin/java 只是 stub：没装 JDK 时它也存在，执行只会弹「需要安装 Java」，
+      // 拿它去 spawn 网关等于拿到一个静默失败的进程
+      if (process.platform === 'darwin' && dir.trim() === '/usr/bin') continue;
       const p = join(dir.trim(), exe);
       if (fs.pathExistsSync(p)) return p;
     } catch {
@@ -239,17 +242,89 @@ function findJavaInCommon(): string {
   return '';
 }
 
-function resolveJavaBin(javaHome: string): string {
-  const home = (javaHome || '').trim();
-  if (home) {
-    const bin = findJavaInDir(home);
-    if (bin) return bin;
+// macOS 上 JDK 的落点和 Windows 完全不同，也不保证在 PATH 上（Finder 启动的 app 只有
+// fixPath 补过的最小 PATH）。按可信度收集候选：
+// 1) /usr/libexec/java_home —— 系统的 JVM 注册表，装了任一发行版都能问到
+// 2) /Library/Java/JavaVirtualMachines 与 ~/Library/.../JavaVirtualMachines —— .pkg 安装位置
+// 3) Homebrew（Apple Silicon 在 /opt/homebrew，Intel 在 /usr/local）与 SDKMAN
+function findJavaOnMac(): string[] {
+  const homes: string[] = [];
+  const addHome = (home: string) => {
+    if (home && !homes.includes(home)) homes.push(home);
+  };
+  const listDir = (dir: string): string[] => {
+    try {
+      return dir && fs.pathExistsSync(dir) ? fs.readdirSync(dir) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const javaHomeTool = '/usr/libexec/java_home';
+  if (fs.pathExistsSync(javaHomeTool)) {
+    // 不带 -v 即返回已注册的最高版本；只问一次，避免轮询时反复拉起子进程
+    try {
+      const out = execFileSync(javaHomeTool, [], { timeout: 5000, encoding: 'utf8' }).trim();
+      addHome(out);
+    } catch {
+      /* 未安装或未注册，交给下面的目录扫描兜底 */
+    }
   }
-  const fromJavaHome = (process.env.JAVA_HOME || '').trim();
-  if (fromJavaHome) {
-    const bin = findJavaInDir(fromJavaHome);
-    if (bin) return bin;
+
+  const home = process.env.HOME || '';
+  for (const base of ['/Library/Java/JavaVirtualMachines', join(home, 'Library/Java/JavaVirtualMachines')]) {
+    for (const ent of listDir(base)) addHome(join(base, ent, 'Contents', 'Home'));
   }
+  for (const prefix of ['/opt/homebrew/opt', '/usr/local/opt']) {
+    for (const ent of listDir(prefix)) {
+      if (/^openjdk/i.test(ent)) addHome(join(prefix, ent, 'libexec', 'openjdk.jdk', 'Contents', 'Home'));
+    }
+  }
+  const sdkman = join(home, '.sdkman', 'candidates', 'java');
+  for (const ent of listDir(sdkman)) addHome(join(sdkman, ent));
+
+  return homes.map((h) => findJavaInDir(h)).filter(Boolean);
+}
+
+// 候选必须真的能跑 -version 才算数：stub、残留下载的损坏目录都会在这里被筛掉
+function javaUsable(bin: string): boolean {
+  try {
+    execFileSync(bin, ['-version'], { timeout: 6000, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// gatewayStatus() 会随前端轮询反复调用探测，macOS 上每次探测要拉起 java_home 和一次
+// `java -version` 验证，代价不低。这里做 10 秒短缓存；用户主动点「检测」时走 fresh 跳过缓存
+const JAVA_BIN_TTL = 10_000;
+let javaBinCache: { key: string; bin: string; at: number } | null = null;
+
+function resolveJavaBin(javaHome: string, fresh = false): string {
+  const key = `${javaHome}|${process.env.JAVA_HOME || ''}|${process.env.PATH || process.env.Path || ''}`;
+  if (!fresh && javaBinCache && javaBinCache.key === key && Date.now() - javaBinCache.at < JAVA_BIN_TTL) {
+    return javaBinCache.bin;
+  }
+  const bin = resolveJavaBinUncached(javaHome);
+  javaBinCache = { key, bin, at: Date.now() };
+  return bin;
+}
+
+function resolveJavaBinUncached(javaHome: string): string {
+  const fromHome = [(javaHome || '').trim(), (process.env.JAVA_HOME || '').trim()]
+    .filter(Boolean)
+    .map((h) => findJavaInDir(h))
+    .find(Boolean);
+
+  if (process.platform === 'darwin') {
+    // 显式配置优先，其次是 JDK 常见安装位置（比 PATH 可靠），最后才是 PATH
+    const candidates = [fromHome, ...findJavaOnMac(), findJavaOnPath()].filter(Boolean) as string[];
+    const usable = candidates.find(javaUsable);
+    return usable || 'java';
+  }
+
+  if (fromHome) return fromHome;
   const fromPath = findJavaOnPath();
   if (fromPath) return fromPath;
   const fromCommon = findJavaInCommon();
@@ -411,9 +486,13 @@ export async function startGateway(override?: Partial<GatewaySettings>): Promise
   if (!jar) throw new Error('gateway.jar not found under resources/gateway');
   const javaBin = resolveJavaBin(s.javaHome);
   const javaResolved = javaBin.includes('/') || javaBin.includes('\\');
-  if (!javaResolved && process.platform === 'win32') {
+  if (!javaResolved) {
+    // 之前只对 Windows 报错，mac/linux 会带着一个裸 'java' 去 spawn，ENOENT 之后
+    // 网关静默起不来，用户只看到「源无数据」，找不到原因
     throw new Error(
-      'java.exe not found. Install JRE/JDK and set Java Home in gateway settings (e.g. C:\\Program Files\\Eclipse Adoptium\\jdk-21.x.x)',
+      process.platform === 'darwin'
+        ? 'java not found. 请先安装 JRE/JDK（推荐 Temurin 21: brew install --cask temurin），或在网关设置里填写 Java Home（例如 /Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home）'
+        : 'java.exe not found. Install JRE/JDK and set Java Home in gateway settings (e.g. C:\\Program Files\\Eclipse Adoptium\\jdk-21.x.x)',
     );
   }
   const dataDir = resolveDataDir(s.dataDir);
@@ -523,7 +602,7 @@ export async function restartGateway(override?: Partial<GatewaySettings>): Promi
 }
 
 export async function checkJava(javaHome: string): Promise<{ ok: boolean; version?: string; message?: string }> {
-  const bin = resolveJavaBin(javaHome);
+  const bin = resolveJavaBin(javaHome, true);
   return new Promise((resolve) => {
     execFile(bin, ['-version'], { timeout: 8000 }, (err, _stdout, stderr) => {
       if (err) {
