@@ -33,14 +33,16 @@ const BOOT_TIMEOUT = Number(argValue('timeout') || 90000);
 const KEEP_USER_DATA = hasFlag('use-user-data');
 
 // 首屏 + 主要路由。npm run build 出来的 hash 路由，改 hash 就能切页。
+// 只列菜单里能点到的页面。/play/index 虽然在路由表里，但 meta.hidden 且必须带
+// ?url=&name= 才有内容，无参打开只是个空播放器壳（约 140 个节点），拿它当独立页面
+// 断言必然踩 MIN_NODES —— 那不是白屏，是测法不对，所以单独排除。
 const ROUTES = [
   { hash: '/film/index', label: '影视' },
   { hash: '/iptv/index', label: '电视' },
   { hash: '/drive/index', label: '网盘' },
   { hash: '/chase/index', label: '追更' },
-  { hash: '/play/index', label: '解析' },
+  { hash: '/analyze/index', label: '解析' },
   { hash: '/setting/index', label: '设置' },
-  { hash: '/analyze/index', label: '过刻' },
 ];
 
 // 页面至少要有这么多 DOM 节点才算渲染成功（空白页约 100 个）
