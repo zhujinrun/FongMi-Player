@@ -86,7 +86,9 @@ linux:
   # 可执行文件名
   executableName: fmplayer
   # 应用程序的图标文件路径
-  icon: build/icons/logo.icns
+  # icon: build/icons/logo.icns
+  # 应用程序的图标（Linux 不能用 .icns，必须给 png 目录或单张 png，
+  icon: build/icons
   # 构建类型
   target:
     - target: AppImage
